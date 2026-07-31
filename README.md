@@ -105,7 +105,7 @@ AI 分析 → 更新未分析记录结果 + 清空当前录制
 npm run zip
 ```
 
-产物：`AI前端调试助手_v1.0.zip`（ZIP 根目录直接包含 `manifest.json`）。
+产物：`LocalDebugAI_v1.0.zip`（ZIP 根目录直接包含 `manifest.json`）。
 
 ## 📝 License
 

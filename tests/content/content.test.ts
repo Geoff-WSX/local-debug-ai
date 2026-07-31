@@ -28,7 +28,7 @@ describe('content script', () => {
     // 先注入再设置录制状态（页面加载清理逻辑会重置状态）
     mockData.recordingStatuses['localhost:3000'] = 1234567890
     mockData['localhost:3000'] = {
-      projectContext: '', apiKey: '', currentRecording: [], analysisHistory: [],
+      projectContext: '', currentRecording: [], analysisHistory: [],
     }
 
     document.body.innerHTML = '<button id="test-btn">Login</button>'
@@ -45,7 +45,7 @@ describe('content script', () => {
 
     mockData.recordingStatuses['localhost:3000'] = 0
     mockData['localhost:3000'] = {
-      projectContext: '', apiKey: '', currentRecording: [], analysisHistory: [],
+      projectContext: '', currentRecording: [], analysisHistory: [],
     }
 
     document.body.innerHTML = '<button>Click</button>'
@@ -62,7 +62,7 @@ describe('content script', () => {
     const oldTime = Date.now() - 100000
     const newTime = Date.now() + 100000 // 未来时间，模拟录制中写入
     mockData['localhost:3000'] = {
-      projectContext: '', apiKey: '',
+      projectContext: '',
       currentRecording: [
         { type: 'click', timestamp: oldTime, pageUrl: '/' }, // 旧记录
         { type: 'click', timestamp: newTime, pageUrl: '/' }, // 新记录（模拟录制中写入）
@@ -85,7 +85,7 @@ describe('content script', () => {
 
     mockData.recordingStatuses['localhost:3000'] = 1234567890
     mockData['localhost:3000'] = {
-      projectContext: '', apiKey: '', currentRecording: [], analysisHistory: [],
+      projectContext: '', currentRecording: [], analysisHistory: [],
     }
 
     history.pushState({}, '', '/new-page')

@@ -70,7 +70,12 @@ export const useAppStore = defineStore('app', () => {
 
   // ===== AI 分析 =====
   async function analyzeCurrentRecording(): Promise<string | null> {
-    const apiKey = originSession.value.apiKey || globalConfig.value.globalApiKey
+    // 使用当前激活模型（每次只能启动一个）
+    const activeModel = await storage.getActiveModel()
+    if (!activeModel) {
+      return '请先在设置中心配置并激活模型'
+    }
+    const apiKey = activeModel.apiKey
     const error = validateBeforeAnalyze(apiKey, originSession.value.currentRecording)
     if (error) return error
 
@@ -83,14 +88,14 @@ export const useAppStore = defineStore('app', () => {
         expectedEffect.value || undefined,
       )
 
-      const response = await fetch(buildApiUrl(globalConfig.value), {
+      const response = await fetch(buildApiUrl(activeModel), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: globalConfig.value.defaultModel,
+          model: activeModel.model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(originSession.value.currentRecording) },
@@ -199,6 +204,7 @@ export const useAppStore = defineStore('app', () => {
     restoreRecordingState,
     startRecording,
     stopRecording,
+    reloadRecordingData,
     addLiveRecord,
     removeLiveRecord,
     analyzeCurrentRecording,

@@ -14,9 +14,13 @@ import {
   appendUnanalyzedHistory,
   findUnanalyzedHistory,
   updateHistoryResult,
+  getActiveModel,
+  addModel,
+  updateModel,
+  deleteModel,
+  setActiveModel,
 } from '../../src/utils/storage'
-import type { GlobalConfig, OriginSession, OperationItem } from '../../src/types'
-import { DEFAULT_GLOBAL_CONFIG } from '../../src/types'
+import type { GlobalConfig, OriginSession, OperationItem, ModelConfig } from '../../src/types'
 
 const mockChrome = chrome as any
 
@@ -29,30 +33,98 @@ describe('storage', () => {
     it('should return default config when no global data', async () => {
       mockChrome.storage.local.get.mockResolvedValue({})
       const config = await getGlobalConfig()
-      expect(config).toEqual(DEFAULT_GLOBAL_CONFIG)
+      expect(config.models).toEqual([])
+      expect(config.activeModelId).toBe('')
     })
 
-    it('should return stored global config', async () => {
+    it('should return stored global config (new format)', async () => {
       const stored: GlobalConfig = {
+        models: [{ id: 'm1', name: 'Test', apiKey: 'sk', baseUrl: 'url', apiPath: '/chat/completions', model: 'gpt' }],
+        activeModelId: 'm1',
+      }
+      mockChrome.storage.local.get.mockResolvedValue({ global: stored })
+      const config = await getGlobalConfig()
+      expect(config).toEqual(stored)
+    })
+
+    it('should migrate legacy single-model config to model list', async () => {
+      const legacy = {
         globalApiKey: 'sk-test',
         baseUrl: 'https://custom.api.com/v1',
         apiPath: '/chat/completions',
         defaultModel: 'gpt-4',
       }
-      mockChrome.storage.local.get.mockResolvedValue({ global: stored })
+      mockChrome.storage.local.get.mockResolvedValue({ global: legacy })
       const config = await getGlobalConfig()
-      expect(config).toEqual(stored)
+      expect(config.models).toHaveLength(1)
+      expect(config.models[0].apiKey).toBe('sk-test')
+      expect(config.models[0].model).toBe('gpt-4')
+      expect(config.activeModelId).toBe(config.models[0].id)
+    })
+  })
+
+  describe('model CRUD', () => {
+    it('getActiveModel should return active model', async () => {
+      const models: ModelConfig[] = [
+        { id: 'm1', name: 'A', apiKey: 'k1', baseUrl: 'u1', apiPath: '/p1', model: 'a' },
+        { id: 'm2', name: 'B', apiKey: 'k2', baseUrl: 'u2', apiPath: '/p2', model: 'b' },
+      ]
+      mockChrome.storage.local.get.mockResolvedValue({
+        global: { models, activeModelId: 'm2' },
+      })
+      const active = await getActiveModel()
+      expect(active?.name).toBe('B')
+    })
+
+    it('addModel should add and auto-activate first model', async () => {
+      mockChrome.storage.local.get.mockResolvedValue({ global: { models: [], activeModelId: '' } })
+      const added = await addModel({ name: 'New', apiKey: 'k', baseUrl: 'u', apiPath: '/p', model: 'm' })
+      const setCall = mockChrome.storage.local.set.mock.calls[0][0]
+      expect(setCall.global.models).toHaveLength(1)
+      expect(setCall.global.activeModelId).toBe(added.id)
+    })
+
+    it('deleteModel should remove model and reassign active', async () => {
+      const models: ModelConfig[] = [
+        { id: 'm1', name: 'A', apiKey: 'k1', baseUrl: 'u1', apiPath: '/p1', model: 'a' },
+        { id: 'm2', name: 'B', apiKey: 'k2', baseUrl: 'u2', apiPath: '/p2', model: 'b' },
+      ]
+      mockChrome.storage.local.get.mockResolvedValue({ global: { models, activeModelId: 'm1' } })
+      await deleteModel('m1')
+      const setCall = mockChrome.storage.local.set.mock.calls[0][0]
+      expect(setCall.global.models).toHaveLength(1)
+      expect(setCall.global.activeModelId).toBe('m2')
+    })
+
+    it('setActiveModel should update active id', async () => {
+      const models: ModelConfig[] = [
+        { id: 'm1', name: 'A', apiKey: 'k1', baseUrl: 'u1', apiPath: '/p1', model: 'a' },
+      ]
+      mockChrome.storage.local.get.mockResolvedValue({ global: { models, activeModelId: 'm1' } })
+      await setActiveModel('m1')
+      const setCall = mockChrome.storage.local.set.mock.calls[0][0]
+      expect(setCall.global.activeModelId).toBe('m1')
+    })
+
+    it('updateModel should update fields', async () => {
+      const models: ModelConfig[] = [
+        { id: 'm1', name: 'A', apiKey: 'k1', baseUrl: 'u1', apiPath: '/p1', model: 'a' },
+      ]
+      mockChrome.storage.local.get.mockResolvedValue({ global: { models, activeModelId: 'm1' } })
+      await updateModel('m1', { model: 'gpt-4o' })
+      const setCall = mockChrome.storage.local.set.mock.calls[0][0]
+      expect(setCall.global.models[0].model).toBe('gpt-4o')
     })
   })
 
   describe('setGlobalConfig', () => {
     it('should merge with existing config', async () => {
       mockChrome.storage.local.get.mockResolvedValue({
-        global: { globalApiKey: 'old', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o-mini' },
+        global: { models: [{ id: 'm1', name: 'T', apiKey: 'old', baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini' }], activeModelId: 'm1' },
       })
-      await setGlobalConfig({ globalApiKey: 'new-key' })
+      await setGlobalConfig({ activeModelId: '' })
       expect(mockChrome.storage.local.set).toHaveBeenCalledWith({
-        global: expect.objectContaining({ globalApiKey: 'new-key', baseUrl: 'https://api.openai.com/v1' }),
+        global: expect.objectContaining({ activeModelId: '' }),
       })
     })
   })
@@ -63,7 +135,7 @@ describe('storage', () => {
       const session = await getOriginSession('localhost:5173')
       expect(session).toEqual({
         projectContext: '',
-        apiKey: '',
+        
         currentRecording: [],
         analysisHistory: [],
       })
@@ -72,14 +144,12 @@ describe('storage', () => {
     it('should return stored session for origin', async () => {
       const stored: OriginSession = {
         projectContext: '# Project',
-        apiKey: 'site-key',
         currentRecording: [],
         analysisHistory: [],
       }
       mockChrome.storage.local.get.mockResolvedValue({ 'localhost:5173': stored })
       const session = await getOriginSession('localhost:5173')
       expect(session.projectContext).toBe('# Project')
-      expect(session.apiKey).toBe('site-key')
     })
   })
 
@@ -87,7 +157,7 @@ describe('storage', () => {
     it('should append item to currentRecording', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: '', apiKey: '', currentRecording: [], analysisHistory: [],
+        projectContext: '', currentRecording: [], analysisHistory: [],
       }
       mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
 
@@ -107,7 +177,7 @@ describe('storage', () => {
     it('should append analysis record to history', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: '', apiKey: '', currentRecording: [], analysisHistory: [],
+        projectContext: '', currentRecording: [], analysisHistory: [],
       }
       mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
 
@@ -128,7 +198,7 @@ describe('storage', () => {
     it('should clear currentRecording array', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: 'docs', apiKey: '', currentRecording: [{ type: 'click', timestamp: 1, pageUrl: '/' } as OperationItem],
+        projectContext: 'docs', currentRecording: [{ type: 'click', timestamp: 1, pageUrl: '/' } as OperationItem],
         analysisHistory: [{ timestamp: 1, records: [], result: 'old' }],
       }
       mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
@@ -146,7 +216,7 @@ describe('storage', () => {
     it('should delete a specific history item by timestamp', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: '', apiKey: '', currentRecording: [],
+        projectContext: '', currentRecording: [],
         analysisHistory: [
           { timestamp: 100, records: [], result: 'first' },
           { timestamp: 200, records: [], result: 'second' },
@@ -167,7 +237,7 @@ describe('storage', () => {
     it('should clear all history records', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: 'docs', apiKey: '', currentRecording: [],
+        projectContext: 'docs', currentRecording: [],
         analysisHistory: [
           { timestamp: 100, records: [], result: 'first' },
         ],
@@ -210,7 +280,7 @@ describe('storage', () => {
     it('should save current recording as unanalyzed history', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: '', apiKey: '', currentRecording: [],
+        projectContext: '', currentRecording: [],
         analysisHistory: [],
       }
       existing.currentRecording = [{ type: 'click', timestamp: 100, pageUrl: '/home' } as OperationItem]
@@ -227,7 +297,7 @@ describe('storage', () => {
     it('should not save when recording is empty', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: '', apiKey: '', currentRecording: [], analysisHistory: [],
+        projectContext: '', currentRecording: [], analysisHistory: [],
       }
       mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
 
@@ -241,7 +311,7 @@ describe('storage', () => {
     it('should return latest unanalyzed record', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: '', apiKey: '', currentRecording: [],
+        projectContext: '', currentRecording: [],
         analysisHistory: [
           { timestamp: 100, records: [], result: 'analyzed' },
           { timestamp: 200, records: [{ type: 'click' as any, timestamp: 1, pageUrl: '/' }], result: '' },
@@ -256,7 +326,7 @@ describe('storage', () => {
     it('should return null when all analyzed', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: '', apiKey: '', currentRecording: [],
+        projectContext: '', currentRecording: [],
         analysisHistory: [{ timestamp: 100, records: [], result: 'done' }],
       }
       mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
@@ -269,7 +339,7 @@ describe('storage', () => {
     it('should update result by timestamp', async () => {
       const origin = 'localhost:5173'
       const existing: OriginSession = {
-        projectContext: '', apiKey: '', currentRecording: [],
+        projectContext: '', currentRecording: [],
         analysisHistory: [{ timestamp: 100, records: [], result: '' }],
       }
       mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })

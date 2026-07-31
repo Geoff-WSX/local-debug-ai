@@ -1,9 +1,19 @@
 // ===== 全局配置 =====
-export interface GlobalConfig {
-  globalApiKey: string
+
+// 单个模型配置（完整连接配置）
+export interface ModelConfig {
+  id: string            // 唯一 ID
+  name: string          // 显示名（如 "OpenAI GPT"）
+  apiKey: string
   baseUrl: string
-  apiPath: string
-  defaultModel: string
+  apiPath: string       // /chat/completions 等
+  model: string         // 模型名称
+}
+
+// 全局配置：模型列表 + 当前激活模型（每次只能启动一个）
+export interface GlobalConfig {
+  models: ModelConfig[]
+  activeModelId: string
 }
 
 // API 路径格式预设
@@ -38,7 +48,6 @@ export interface AnalysisRecord {
 // ===== 单个 Origin 站点数据 =====
 export interface OriginSession {
   projectContext: string
-  apiKey: string
   currentRecording: OperationItem[]
   analysisHistory: AnalysisRecord[]
 }
@@ -63,16 +72,30 @@ export type ExtensionMessage =
 
 // ===== 默认值 =====
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
-  globalApiKey: '',
-  baseUrl: 'https://api.openai.com/v1',
-  apiPath: '/chat/completions',
-  defaultModel: 'gpt-4o-mini',
+  models: [],
+  activeModelId: '',
+}
+
+/** 生成模型 ID */
+export function genModelId(): string {
+  return `model_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+/** 创建默认空模型配置 */
+export function createDefaultModel(): ModelConfig {
+  return {
+    id: genModelId(),
+    name: '',
+    apiKey: '',
+    baseUrl: 'https://api.openai.com/v1',
+    apiPath: '/chat/completions',
+    model: 'gpt-4o-mini',
+  }
 }
 
 export function createDefaultOriginSession(): OriginSession {
   return {
     projectContext: '',
-    apiKey: '',
     currentRecording: [],
     analysisHistory: [],
   }

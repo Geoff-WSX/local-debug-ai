@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp manifest.json dist/ && rm -rf dist/icons && cp -R dist/* /Users/Zhuanz/Downloads/AI前端调试助手_chrome/ && echo '✓ 已同步到 AI前端调试助手_chrome/'",
-    "build:local": "vite build && cp manifest.json dist/ && rm -rf dist/icons",
+    "build": "vite build && cp manifest.json dist/ && cp -R dist/* /Users/Zhuanz/Downloads/LocalDebugAI_chrome/ && echo '✓ 已同步到 LocalDebugAI_chrome/'",
+    "build:local": "vite build && cp manifest.json dist/",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "zip": "npm run build && cd dist && zip -r ../AI前端调试助手_v1.0.zip . && echo '✓ ZIP 已生成: AI前端调试助手_v1.0.zip'"
+    "zip": "npm run build && cd dist && zip -r ../LocalDebugAI_v1.0.zip . && echo '✓ ZIP 已生成: LocalDebugAI_v1.0.zip'"
   },
   "dependencies": {
     "vue": "^3.4.0",

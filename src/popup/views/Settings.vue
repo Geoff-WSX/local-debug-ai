@@ -1,96 +1,143 @@
 <template>
   <div class="p-4 space-y-5">
-    <h2 class="text-sm font-bold text-gray-800">🔧 全局配置</h2>
+    <h2 class="text-sm font-bold text-gray-800">🔧 模型配置</h2>
+    <p class="text-xs text-gray-500 -mt-2">配置多个模型，每次仅激活一个用于 AI 分析</p>
 
-    <!-- 全局 API Key -->
-    <div>
-      <label class="text-xs font-medium text-gray-600 block mb-1">API 密钥（全局默认）</label>
-      <input
-        v-model="form.globalApiKey"
-        type="password"
-        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
-        placeholder="sk-..."
-      />
-    </div>
-
-    <!-- Base URL -->
-    <div>
-      <label class="text-xs font-medium text-gray-600 block mb-1">接口地址（Base URL）</label>
-      <input
-        v-model="form.baseUrl"
-        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
-        placeholder="https://api.openai.com/v1"
-      />
-    </div>
-
-    <!-- API 端点路径格式 -->
-    <div>
-      <label class="text-xs font-medium text-gray-600 block mb-1">API 格式</label>
-      <select
-        v-model="form.apiPath"
-        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+    <!-- 模型列表 -->
+    <div class="space-y-2">
+      <div
+        v-for="model in models"
+        :key="model.id"
+        class="border rounded-lg p-3"
+        :class="model.id === activeModelId ? 'border-blue-400 bg-blue-50' : 'border-gray-200'"
       >
-        <option v-for="p in apiPathPresets" :key="p.path" :value="p.path">
-          {{ p.label }} ({{ p.path }})
-        </option>
-      </select>
-      <div class="text-[10px] text-gray-400 mt-1">
-        完整请求地址: <code class="bg-gray-100 px-1 rounded">{{ fullUrl }}</code>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 min-w-0">
+            <span
+              class="w-3 h-3 rounded-full shrink-0"
+              :class="model.id === activeModelId ? 'bg-green-500' : 'bg-gray-300'"
+            />
+            <span class="text-xs font-medium text-gray-800 truncate">{{ model.name || '未命名模型' }}</span>
+            <span
+              v-if="model.id === activeModelId"
+              class="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded shrink-0"
+            >
+              当前激活
+            </span>
+          </div>
+          <div class="flex gap-1 shrink-0">
+            <button
+              v-if="model.id !== activeModelId"
+              class="text-[10px] px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+              @click="activateModel(model.id)"
+            >
+              激活
+            </button>
+            <button
+              class="text-[10px] px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+              @click="startEdit(model)"
+            >
+              编辑
+            </button>
+            <button
+              class="text-[10px] px-2 py-1 bg-red-50 text-red-500 rounded hover:bg-red-100"
+              @click="removeModel(model.id)"
+            >
+              删除
+            </button>
+          </div>
+        </div>
+        <div class="text-[10px] text-gray-400 mt-1 truncate">
+          {{ model.model }} · {{ model.baseUrl }}{{ model.apiPath }}
+        </div>
       </div>
-    </div>
 
-    <!-- 模型名称 -->
-    <div>
-      <label class="text-xs font-medium text-gray-600 block mb-1">模型名称</label>
-      <input
-        v-model="form.defaultModel"
-        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
-        placeholder="gpt-4o-mini"
-      />
-    </div>
-
-    <hr class="border-gray-200" />
-
-    <h2 class="text-sm font-bold text-gray-800">📌 当前站点配置</h2>
-
-    <!-- 站点独立 API Key -->
-    <div>
-      <label class="text-xs font-medium text-gray-600 block mb-1">
-        站点独立密钥
-        <span class="text-gray-400 font-normal">（留空则使用全局密钥）</span>
-      </label>
-      <input
-        v-model="form.siteApiKey"
-        type="password"
-        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
-        placeholder="可选：当前站点专属密钥"
-      />
-    </div>
-
-    <!-- 操作按钮 -->
-    <div class="flex gap-2">
       <button
-        class="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
-        @click="handleSave"
+        class="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors"
+        @click="startAdd"
       >
-        💾 保存配置
-      </button>
-      <button
-        class="flex-1 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors disabled:opacity-40"
-        :disabled="!canTest"
-        @click="handleTest"
-      >
-        {{ testing ? '⏳ 测试中...' : '🔗 连通性测试' }}
+        ＋ 添加模型
       </button>
     </div>
 
-    <!-- 测试结果 -->
-    <div
-      v-if="testResult"
-      class="text-xs rounded-lg p-3"
-      :class="testResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'"
-    >
-      {{ testResult.msg }}
+    <!-- 模型编辑表单 -->
+    <div v-if="editing" class="border border-blue-300 rounded-lg p-3 space-y-3 bg-white">
+      <h3 class="text-xs font-bold text-gray-800">{{ editing.id ? '编辑模型' : '添加模型' }}</h3>
+      <div>
+        <label class="text-xs text-gray-600 block mb-1">模型名称（自定义）</label>
+        <input
+          v-model="editing.name"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="如：OpenAI GPT / DeepSeek"
+        />
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 block mb-1">API 密钥</label>
+        <input
+          v-model="editing.apiKey"
+          type="password"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="sk-..."
+        />
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 block mb-1">接口地址（Base URL）</label>
+        <input
+          v-model="editing.baseUrl"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="https://api.openai.com/v1"
+        />
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 block mb-1">API 格式</label>
+        <select
+          v-model="editing.apiPath"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+        >
+          <option v-for="p in apiPathPresets" :key="p.path" :value="p.path">
+            {{ p.label }} ({{ p.path }})
+          </option>
+        </select>
+        <div class="text-[10px] text-gray-400 mt-1">
+          完整请求地址: <code class="bg-gray-100 px-1 rounded">{{ editFullUrl }}</code>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 block mb-1">模型名称</label>
+        <input
+          v-model="editing.model"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="gpt-4o-mini"
+        />
+      </div>
+      <div class="flex gap-2">
+        <button
+          class="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
+          @click="saveModel"
+        >
+          💾 保存模型
+        </button>
+        <button
+          class="flex-1 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 disabled:opacity-40"
+          :disabled="!canTest"
+          @click="handleTest"
+        >
+          {{ testing ? '⏳ 测试中...' : '🔗 测试连接' }}
+        </button>
+        <button
+          class="px-3 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-300"
+          @click="cancelEdit"
+        >
+          取消
+        </button>
+      </div>
+      <div
+        v-if="testResult"
+        class="text-xs rounded-lg p-3"
+        :class="testResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'"
+      >
+        {{ testResult.msg }}
+      </div>
     </div>
 
     <hr class="border-gray-200" />
@@ -131,8 +178,15 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAppStore } from '@/stores/useAppStore'
-import { getGlobalConfig, setGlobalConfig, getOriginSession, setOriginSession } from '@/utils/storage'
-import { API_PATH_PRESETS } from '@/types'
+import {
+  getGlobalConfig,
+  addModel,
+  updateModel,
+  deleteModel,
+  setActiveModel,
+} from '@/utils/storage'
+import { API_PATH_PRESETS, createDefaultModel } from '@/types'
+import type { ModelConfig } from '@/types'
 
 const store = useAppStore()
 const testing = ref(false)
@@ -141,36 +195,25 @@ const importResult = ref<{ ok: boolean; msg: string } | null>(null)
 const importInput = ref<HTMLInputElement | null>(null)
 const apiPathPresets = API_PATH_PRESETS
 
-const form = reactive({
-  globalApiKey: '',
-  baseUrl: 'https://api.openai.com/v1',
-  apiPath: '/chat/completions',
-  defaultModel: 'gpt-4o-mini',
-  siteApiKey: '',
-})
+const models = ref<ModelConfig[]>([])
+const activeModelId = ref('')
+const editing = ref<ModelConfig | null>(null)
 
-const fullUrl = computed(() => {
-  const base = form.baseUrl.replace(/\/+$/, '')
-  const path = form.apiPath.startsWith('/') ? form.apiPath : `/${form.apiPath}`
+const editFullUrl = computed(() => {
+  if (!editing.value) return ''
+  const base = editing.value.baseUrl.replace(/\/+$/, '')
+  const path = editing.value.apiPath.startsWith('/') ? editing.value.apiPath : `/${editing.value.apiPath}`
   return `${base}${path}`
 })
 
 const canTest = computed(() => {
-  const key = form.siteApiKey || form.globalApiKey
-  return !!key && !testing.value
+  return !!editing.value?.apiKey && !testing.value
 })
 
 async function loadSettings() {
   const global = await getGlobalConfig()
-  form.globalApiKey = global.globalApiKey
-  form.baseUrl = global.baseUrl
-  form.apiPath = global.apiPath || '/chat/completions'
-  form.defaultModel = global.defaultModel
-
-  if (store.currentOrigin) {
-    const session = await getOriginSession(store.currentOrigin)
-    form.siteApiKey = session.apiKey
-  }
+  models.value = global.models
+  activeModelId.value = global.activeModelId
 }
 
 // 监听站点切换
@@ -180,34 +223,73 @@ watch(() => store.currentOrigin, () => {
 
 onMounted(loadSettings)
 
-async function handleSave() {
-  await setGlobalConfig({
-    globalApiKey: form.globalApiKey,
-    baseUrl: form.baseUrl,
-    apiPath: form.apiPath,
-    defaultModel: form.defaultModel,
-  })
-  if (store.currentOrigin) {
-    await setOriginSession(store.currentOrigin, { apiKey: form.siteApiKey })
+function startAdd() {
+  editing.value = createDefaultModel()
+  testResult.value = null
+}
+
+function startEdit(model: ModelConfig) {
+  editing.value = { ...model }
+  testResult.value = null
+}
+
+function cancelEdit() {
+  editing.value = null
+  testResult.value = null
+}
+
+async function saveModel() {
+  if (!editing.value) return
+  if (!editing.value.name) {
+    alert('请输入模型名称')
+    return
   }
-  alert('配置已保存')
+  if (!editing.value.apiKey) {
+    alert('请输入 API 密钥')
+    return
+  }
+
+  if (editing.value.id && models.value.some((m) => m.id === editing.value!.id)) {
+    // 编辑已有模型
+    await updateModel(editing.value.id, { ...editing.value })
+  } else {
+    // 新增模型
+    const { id, ...rest } = editing.value
+    await addModel(rest)
+  }
+  editing.value = null
+  await loadSettings()
+  alert('模型已保存')
+}
+
+async function activateModel(id: string) {
+  await setActiveModel(id)
+  await loadSettings()
+}
+
+async function removeModel(id: string) {
+  if (!confirm('确认删除该模型？')) return
+  await deleteModel(id)
+  await loadSettings()
 }
 
 async function handleTest() {
+  if (!editing.value) return
   testing.value = true
   testResult.value = null
 
-  const apiKey = form.siteApiKey || form.globalApiKey
+  const apiKey = editing.value.apiKey
+  const url = editFullUrl.value
 
   try {
-    const res = await fetch(fullUrl.value, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: form.defaultModel,
+        model: editing.value.model,
         messages: [{ role: 'user', content: 'Hi' }],
         max_tokens: 5,
       }),
@@ -252,7 +334,6 @@ async function handleImport(e: Event) {
     await chrome.storage.local.clear()
     await chrome.storage.local.set(data)
     importResult.value = { ok: true, msg: '✅ 配置已恢复，请重新打开插件查看' }
-    // 重新加载当前页面数据
     await loadSettings()
     if (store.currentOrigin) {
       await store.loadOriginData(store.currentOrigin)

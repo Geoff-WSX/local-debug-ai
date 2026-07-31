@@ -3,6 +3,7 @@ import * as storage from '../../src/utils/storage'
 
 const mockFindUnanalyzed = vi.fn()
 const mockUpdateHistoryResult = vi.fn()
+const mockGetActiveModel = vi.fn()
 
 vi.mock('../../src/utils/storage', () => ({
   appendRecording: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock('../../src/utils/storage', () => ({
   setRecordingStatus: vi.fn(),
   findUnanalyzedHistory: (...args: any[]) => mockFindUnanalyzed(...args),
   updateHistoryResult: (...args: any[]) => mockUpdateHistoryResult(...args),
+  getActiveModel: (...args: any[]) => mockGetActiveModel(...args),
 }))
 
 const mockSender = { tab: { id: 123 } } as any
@@ -28,18 +30,19 @@ describe('background', () => {
   it('should handle AI_ANALYZE and update unanalyzed history', async () => {
     const mockSession = {
       projectContext: '# Project',
-      apiKey: '',
       currentRecording: [{ type: 'click', timestamp: 100, pageUrl: '/home' }],
       analysisHistory: [],
     }
-    const mockGlobal = {
-      globalApiKey: 'sk-key',
+    const mockModel = {
+      id: 'm1',
+      name: 'Test',
+      apiKey: 'sk-key',
       baseUrl: 'https://api.openai.com/v1',
       apiPath: '/chat/completions',
-      defaultModel: 'gpt-4o-mini',
+      model: 'gpt-4o-mini',
     }
     vi.mocked(storage.getOriginSession).mockResolvedValue(mockSession as any)
-    vi.mocked(storage.getGlobalConfig).mockResolvedValue(mockGlobal)
+    mockGetActiveModel.mockResolvedValue(mockModel)
     // 存在未分析记录 → 更新
     mockFindUnanalyzed.mockResolvedValue({ timestamp: 500, records: [], result: '' })
 
@@ -59,20 +62,33 @@ describe('background', () => {
     expect(response).toEqual({ success: true, result: '# Found bug\n\nFix this.' })
   })
 
-  it('should handle AI_ANALYZE with missing API key error', async () => {
+  it('should return error when no active model', async () => {
     const mockSession = {
-      projectContext: '', apiKey: '',
+      projectContext: '',
       currentRecording: [{ type: 'click', timestamp: 100, pageUrl: '/home' }],
       analysisHistory: [],
     }
-    const mockGlobal = {
-      globalApiKey: '',
-      baseUrl: 'https://api.openai.com/v1',
-      apiPath: '/chat/completions',
-      defaultModel: 'gpt-4o-mini',
+    vi.mocked(storage.getOriginSession).mockResolvedValue(mockSession as any)
+    mockGetActiveModel.mockResolvedValue(null)
+
+    const { handleMessage } = await import('../../src/background/index')
+    const response = await handleMessage({ type: 'AI_ANALYZE', origin: 'localhost:5173' }, mockSender)
+
+    expect(response).toEqual({ success: false, error: expect.stringContaining('配置并激活') })
+  })
+
+  it('should handle AI_ANALYZE with missing API key error', async () => {
+    const mockSession = {
+      projectContext: '',
+      currentRecording: [{ type: 'click', timestamp: 100, pageUrl: '/home' }],
+      analysisHistory: [],
+    }
+    const mockModel = {
+      id: 'm1', name: 'Test', apiKey: '',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
     }
     vi.mocked(storage.getOriginSession).mockResolvedValue(mockSession as any)
-    vi.mocked(storage.getGlobalConfig).mockResolvedValue(mockGlobal)
+    mockGetActiveModel.mockResolvedValue(mockModel)
 
     const { handleMessage } = await import('../../src/background/index')
     const response = await handleMessage({ type: 'AI_ANALYZE', origin: 'localhost:5173' }, mockSender)
@@ -82,18 +98,16 @@ describe('background', () => {
 
   it('should handle AI_ANALYZE with empty recording error', async () => {
     const mockSession = {
-      projectContext: '', apiKey: 'sk-key',
+      projectContext: '',
       currentRecording: [],
       analysisHistory: [],
     }
-    const mockGlobal = {
-      globalApiKey: 'sk-key',
-      baseUrl: 'https://api.openai.com/v1',
-      apiPath: '/chat/completions',
-      defaultModel: 'gpt-4o-mini',
+    const mockModel = {
+      id: 'm1', name: 'Test', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
     }
     vi.mocked(storage.getOriginSession).mockResolvedValue(mockSession as any)
-    vi.mocked(storage.getGlobalConfig).mockResolvedValue(mockGlobal)
+    mockGetActiveModel.mockResolvedValue(mockModel)
 
     const { handleMessage } = await import('../../src/background/index')
     const response = await handleMessage({ type: 'AI_ANALYZE', origin: 'localhost:5173' }, mockSender)

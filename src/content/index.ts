@@ -25,7 +25,6 @@ async function sendRecord(item: OperationItem) {
         const existing = await chrome.storage.local.get(origin)
         const session = existing[origin] || {
           projectContext: '',
-          apiKey: '',
           currentRecording: [],
           analysisHistory: [],
         }

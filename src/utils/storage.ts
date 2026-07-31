@@ -1,16 +1,100 @@
-import type { GlobalConfig, OriginSession, OperationItem, AnalysisRecord } from '../types'
-import { DEFAULT_GLOBAL_CONFIG, createDefaultOriginSession } from '../types'
+import type { GlobalConfig, OriginSession, OperationItem, AnalysisRecord, ModelConfig } from '../types'
+import { DEFAULT_GLOBAL_CONFIG, createDefaultOriginSession, genModelId } from '../types'
 
 // ===== 全局配置 =====
 
+/**
+ * 读取全局配置（兼容旧版单一模型格式，自动迁移为模型列表）
+ */
 export async function getGlobalConfig(): Promise<GlobalConfig> {
   const data = await chrome.storage.local.get('global')
-  return data.global ? { ...DEFAULT_GLOBAL_CONFIG, ...data.global } : { ...DEFAULT_GLOBAL_CONFIG }
+  const stored = data.global
+
+  // 无配置 → 默认
+  if (!stored) {
+    return { ...DEFAULT_GLOBAL_CONFIG, models: [], activeModelId: '' }
+  }
+
+  // 新版格式（models 数组）
+  if (Array.isArray(stored.models)) {
+    return {
+      models: stored.models || [],
+      activeModelId: stored.activeModelId || '',
+    }
+  }
+
+  // 旧版格式（单一模型字段）→ 迁移为模型列表
+  const legacy: any = stored
+  const migratedModel: ModelConfig = {
+    id: genModelId(),
+    name: '默认模型',
+    apiKey: legacy.globalApiKey || '',
+    baseUrl: legacy.baseUrl || 'https://api.openai.com/v1',
+    apiPath: legacy.apiPath || '/chat/completions',
+    model: legacy.defaultModel || 'gpt-4o-mini',
+  }
+  const migrated: GlobalConfig = {
+    models: [migratedModel],
+    activeModelId: migratedModel.id,
+  }
+  // 写回迁移结果
+  await chrome.storage.local.set({ global: migrated })
+  return migrated
 }
 
 export async function setGlobalConfig(partial: Partial<GlobalConfig>): Promise<void> {
   const current = await getGlobalConfig()
   await chrome.storage.local.set({ global: { ...current, ...partial } })
+}
+
+// ===== 模型 CRUD =====
+
+/** 获取当前激活的模型（无激活返回 null） */
+export async function getActiveModel(): Promise<ModelConfig | null> {
+  const config = await getGlobalConfig()
+  return config.models.find((m) => m.id === config.activeModelId) || null
+}
+
+/** 添加模型 */
+export async function addModel(model: Omit<ModelConfig, 'id'>): Promise<ModelConfig> {
+  const config = await getGlobalConfig()
+  const newModel: ModelConfig = { ...model, id: genModelId() }
+  config.models.push(newModel)
+  // 第一个模型自动设为激活
+  if (!config.activeModelId) {
+    config.activeModelId = newModel.id
+  }
+  await setGlobalConfig({ models: config.models, activeModelId: config.activeModelId })
+  return newModel
+}
+
+/** 更新模型 */
+export async function updateModel(id: string, partial: Partial<ModelConfig>): Promise<void> {
+  const config = await getGlobalConfig()
+  const idx = config.models.findIndex((m) => m.id === id)
+  if (idx !== -1) {
+    config.models[idx] = { ...config.models[idx], ...partial }
+    await setGlobalConfig({ models: config.models })
+  }
+}
+
+/** 删除模型 */
+export async function deleteModel(id: string): Promise<void> {
+  const config = await getGlobalConfig()
+  config.models = config.models.filter((m) => m.id !== id)
+  // 若删除的是激活模型，激活第一个剩余模型
+  if (config.activeModelId === id) {
+    config.activeModelId = config.models[0]?.id || ''
+  }
+  await setGlobalConfig({ models: config.models, activeModelId: config.activeModelId })
+}
+
+/** 设置激活模型 */
+export async function setActiveModel(id: string): Promise<void> {
+  const config = await getGlobalConfig()
+  if (config.models.some((m) => m.id === id)) {
+    await setGlobalConfig({ activeModelId: id })
+  }
 }
 
 // ===== 站点数据 =====

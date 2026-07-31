@@ -8,6 +8,7 @@ const mockGetRecordingStatus = vi.fn()
 const mockSetRecordingStatus = vi.fn()
 const mockFindUnanalyzed = vi.fn()
 const mockUpdateHistoryResult = vi.fn()
+const mockGetActiveModel = vi.fn()
 
 vi.mock('../../src/utils/storage', () => ({
   getGlobalConfig: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('../../src/utils/storage', () => ({
   setRecordingStatus: (...args: any[]) => mockSetRecordingStatus(...args),
   findUnanalyzedHistory: (...args: any[]) => mockFindUnanalyzed(...args),
   updateHistoryResult: (...args: any[]) => mockUpdateHistoryResult(...args),
+  getActiveModel: (...args: any[]) => mockGetActiveModel(...args),
 }))
 
 describe('useAppStore', () => {
@@ -43,9 +45,9 @@ describe('useAppStore', () => {
   })
 
   it('loadOriginData should load global config and origin session', async () => {
-    const mockGlobal = { globalApiKey: 'sk-key', baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', defaultModel: 'gpt-4o-mini' }
+    const mockGlobal = { models: [{ id: 'm1', name: 'T', apiKey: 'sk-key', baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini' }], activeModelId: 'm1' }
     const mockSession: OriginSession = {
-      projectContext: '# Project', apiKey: '', currentRecording: [], analysisHistory: [],
+      projectContext: '# Project', currentRecording: [], analysisHistory: [],
     }
     vi.mocked(storage.getGlobalConfig).mockResolvedValue(mockGlobal)
     vi.mocked(storage.getOriginSession).mockResolvedValue(mockSession)
@@ -98,13 +100,13 @@ describe('useAppStore', () => {
     const store = useAppStore()
     store.isRecording = true
     store.currentOrigin = 'localhost:5173'
-    store.originSession = { projectContext: '', apiKey: '', currentRecording: [{ type: 'click', timestamp: 1, pageUrl: '/' } as OperationItem], analysisHistory: [] }
+    store.originSession = { projectContext: '', currentRecording: [{ type: 'click', timestamp: 1, pageUrl: '/' } as OperationItem], analysisHistory: [] }
     chrome.runtime.sendMessage = vi.fn()
 
     // mock reload 返回的数据
     const loadedSession: OriginSession = {
       projectContext: '',
-      apiKey: '',
+      
       currentRecording: [
         { type: 'click', timestamp: 100, pageUrl: '/home' },
         { type: 'click', timestamp: 200, pageUrl: '/about' },
@@ -147,15 +149,18 @@ describe('useAppStore', () => {
   it('analyzeCurrentRecording should call AI and save history when no unanalyzed', async () => {
     const store = useAppStore()
     store.currentOrigin = 'localhost:5173'
-    store.globalConfig = { globalApiKey: 'sk-key', baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', defaultModel: 'gpt-4o-mini' }
     store.originSession = {
       projectContext: '# Test',
-      apiKey: '',
+      
       currentRecording: [{ type: 'click', timestamp: 100, pageUrl: '/home' }],
       analysisHistory: [],
     }
     store.expectedEffect = '点击后应该跳转'
     mockFindUnanalyzed.mockResolvedValue(null)
+    mockGetActiveModel.mockResolvedValue({
+      id: 'm1', name: 'Test', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
+    })
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -173,17 +178,36 @@ describe('useAppStore', () => {
     expect(store.expectedEffect).toBe('')
   })
 
+  it('analyzeCurrentRecording should return error when no active model', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '# Test',
+      
+      currentRecording: [{ type: 'click', timestamp: 100, pageUrl: '/home' }],
+      analysisHistory: [],
+    }
+    mockGetActiveModel.mockResolvedValue(null)
+
+    const result = await store.analyzeCurrentRecording()
+
+    expect(result).toContain('配置并激活')
+  })
+
   it('analyzeCurrentRecording should update unanalyzed history when exists', async () => {
     const store = useAppStore()
     store.currentOrigin = 'localhost:5173'
-    store.globalConfig = { globalApiKey: 'sk-key', baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', defaultModel: 'gpt-4o-mini' }
     store.originSession = {
       projectContext: '# Test',
-      apiKey: '',
+      
       currentRecording: [{ type: 'click', timestamp: 100, pageUrl: '/home' }],
       analysisHistory: [{ timestamp: 500, records: [{ type: 'click', timestamp: 1, pageUrl: '/' }], result: '' }],
     }
     mockFindUnanalyzed.mockResolvedValue({ timestamp: 500, records: [], result: '' })
+    mockGetActiveModel.mockResolvedValue({
+      id: 'm1', name: 'Test', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
+    })
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -202,7 +226,7 @@ describe('useAppStore', () => {
   it('saveProjectContext should update project context', async () => {
     const store = useAppStore()
     store.currentOrigin = 'localhost:5173'
-    store.originSession = { projectContext: '', apiKey: '', currentRecording: [], analysisHistory: [] }
+    store.originSession = { projectContext: '', currentRecording: [], analysisHistory: [] }
 
     await store.saveProjectContext('# New Project Docs')
 
@@ -213,7 +237,7 @@ describe('useAppStore', () => {
   it('clearProjectContext should clear project context', async () => {
     const store = useAppStore()
     store.currentOrigin = 'localhost:5173'
-    store.originSession = { projectContext: '# Old', apiKey: '', currentRecording: [], analysisHistory: [] }
+    store.originSession = { projectContext: '# Old', currentRecording: [], analysisHistory: [] }
 
     await store.clearProjectContext()
 
@@ -225,7 +249,7 @@ describe('useAppStore', () => {
     const store = useAppStore()
     store.currentOrigin = 'localhost:5173'
     store.originSession = {
-      projectContext: '', apiKey: '', currentRecording: [],
+      projectContext: '', currentRecording: [],
       analysisHistory: [
         { timestamp: 100, records: [], result: 'a' },
         { timestamp: 200, records: [], result: 'b' },
@@ -243,7 +267,7 @@ describe('useAppStore', () => {
     const store = useAppStore()
     store.currentOrigin = 'localhost:5173'
     store.originSession = {
-      projectContext: '', apiKey: '', currentRecording: [],
+      projectContext: '', currentRecording: [],
       analysisHistory: [{ timestamp: 100, records: [], result: 'a' }],
     }
 
@@ -255,11 +279,11 @@ describe('useAppStore', () => {
 
   it('saveGlobalConfig should update global config', async () => {
     const store = useAppStore()
-    store.globalConfig = { globalApiKey: 'old', baseUrl: 'url', apiPath: '/chat/completions', defaultModel: 'model' }
+    store.globalConfig = { models: [], activeModelId: '' }
 
-    await store.saveGlobalConfig({ globalApiKey: 'new-key' })
+    await store.saveGlobalConfig({ activeModelId: 'm1' })
 
-    expect(store.globalConfig.globalApiKey).toBe('new-key')
-    expect(storage.setGlobalConfig).toHaveBeenCalledWith({ globalApiKey: 'new-key' })
+    expect(store.globalConfig.activeModelId).toBe('m1')
+    expect(storage.setGlobalConfig).toHaveBeenCalledWith({ activeModelId: 'm1' })
   })
 })

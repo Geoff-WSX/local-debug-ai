@@ -3,9 +3,11 @@ node_modules/
 
 # 构建产物
 dist/
+LocalDebugAI_v1.0.zip
 AI前端调试助手_v1.0.zip
 
 # 本地 Chrome 加载目录（构建同步目标）
+LocalDebugAI_chrome/
 AI前端调试助手_chrome/
 
 # 日志

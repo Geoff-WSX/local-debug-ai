@@ -18,12 +18,14 @@ function extractOrigin(url: string): string {
  * 处理 AI 分析请求
  */
 async function handleAIAnalyze(origin: string, expectedEffect?: string): Promise<{ success: boolean; result?: string; error?: string }> {
-  const [session, global] = await Promise.all([
-    storage.getOriginSession(origin),
-    storage.getGlobalConfig(),
-  ])
+  const session = await storage.getOriginSession(origin)
+  // 使用当前激活模型（每次只能启动一个）
+  const activeModel = await storage.getActiveModel()
+  if (!activeModel) {
+    return { success: false, error: '请先在设置中心配置并激活模型' }
+  }
 
-  const apiKey = session.apiKey || global.globalApiKey
+  const apiKey = activeModel.apiKey
   const error = validateBeforeAnalyze(apiKey, session.currentRecording)
   if (error) {
     return { success: false, error }
@@ -32,14 +34,14 @@ async function handleAIAnalyze(origin: string, expectedEffect?: string): Promise
   try {
     const systemPrompt = buildSystemPrompt(session.projectContext, session.currentRecording, expectedEffect)
 
-    const response = await fetch(buildApiUrl(global), {
+    const response = await fetch(buildApiUrl(activeModel), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: global.defaultModel,
+        model: activeModel.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(session.currentRecording) },

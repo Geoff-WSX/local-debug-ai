@@ -1,9 +1,9 @@
-import type { OperationItem, GlobalConfig } from '../types'
+import type { OperationItem, ModelConfig } from '../types'
 
 /**
  * 拼接完整的 API 请求地址
  */
-export function buildApiUrl(config: Pick<GlobalConfig, 'baseUrl' | 'apiPath'>): string {
+export function buildApiUrl(config: Pick<ModelConfig, 'baseUrl' | 'apiPath'>): string {
   const base = config.baseUrl.replace(/\/+$/, '')
   const path = config.apiPath?.startsWith('/') ? config.apiPath : `/${config.apiPath || 'chat/completions'}`
   return `${base}${path}`
