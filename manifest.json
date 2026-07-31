@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "AI前端调试助手",
+  "version": "1.0.0",
+  "description": "前端开发者本地调试插件 — 录制页面行为，AI 自动排查代码异常与业务逻辑问题",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_title": "AI前端调试助手"
+  },
+  "side_panel": {
+    "default_path": "src/popup/index.html"
+  },
+  "background": {
+    "service_worker": "src/background/index.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["src/content/index.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
