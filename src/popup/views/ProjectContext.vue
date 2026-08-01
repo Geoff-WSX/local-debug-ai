@@ -1,13 +1,13 @@
 <template>
   <div class="p-4 space-y-4">
-    <div class="text-sm font-medium text-gray-700 mb-2">
+    <div class="text-sm font-medium text-tprimary mb-2">
       项目需求文档
-      <span class="text-xs text-gray-400 font-normal ml-1">（AI 将对照需求校验交互合规性）</span>
+      <span class="text-xs text-tdisabled font-normal ml-1">（AI 将对照需求校验交互合规性）</span>
     </div>
 
     <!-- 文件上传区 -->
     <div
-      class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
+      class="border-2 border-dashed border-edge rounded-lg p-6 text-center cursor-pointer hover:border-accent transition-colors"
       @click="triggerUpload"
       @dragover.prevent
       @drop.prevent="handleDrop"
@@ -19,13 +19,13 @@
         class="hidden"
         @change="handleFileSelect"
       />
-      <p class="text-sm text-gray-500">点击或拖拽上传 .txt / .md 文件</p>
+      <p class="text-sm text-tsecondary">点击或拖拽上传 .txt / .md 文件</p>
     </div>
 
     <!-- 文本编辑区 -->
     <textarea
       v-model="content"
-      class="w-full h-48 p-3 border border-gray-300 rounded-lg text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+      class="w-full h-48 p-3 border border-edge rounded-lg text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
       placeholder="或在此粘贴项目需求文档内容..."
     />
 
@@ -39,7 +39,7 @@
         💾 保存文档
       </button>
       <button
-        class="px-4 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-300 transition-colors"
+        class="px-4 py-2 bg-base-hover text-tsecondary rounded-lg text-sm hover:bg-base-active transition-colors"
         @click="handleClear"
       >
         清空
@@ -48,12 +48,12 @@
 
     <!-- 当前内容预览 -->
     <div v-if="store.originSession.projectContext" class="mt-2">
-      <div class="text-xs text-gray-500 mb-1">已保存的文档内容（{{ store.originSession.projectContext.length }} 字符）</div>
-      <div class="text-xs text-gray-600 bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
+      <div class="text-xs text-tsecondary mb-1">已保存的文档内容（{{ store.originSession.projectContext.length }} 字符）</div>
+      <div class="text-xs text-tsecondary bg-base-hover rounded p-2 max-h-32 overflow-y-auto">
         {{ store.originSession.projectContext.slice(0, 500) }}{{ store.originSession.projectContext.length > 500 ? '...' : '' }}
       </div>
     </div>
-    <div v-else class="text-xs text-yellow-600 mt-2">
+    <div v-else class="text-xs text-warning mt-2">
       ⚠ 尚未上传需求文档，AI 分析将仅基于代码日志排查异常
     </div>
   </div>
@@ -62,6 +62,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAppStore } from '@/stores/useAppStore'
+import { showToast } from '@/popup/components/toastBus'
 
 const store = useAppStore()
 const content = ref('')
@@ -88,7 +89,7 @@ function handleFileSelect(e: Event) {
 
 function readFile(file: File) {
   if (!file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
-    alert('仅支持 .txt 和 .md 文件')
+    showToast('error', '仅支持 .txt 和 .md 文件')
     return
   }
   const reader = new FileReader()

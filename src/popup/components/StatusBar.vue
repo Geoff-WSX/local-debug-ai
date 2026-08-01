@@ -1,6 +1,6 @@
 <template>
-  <div class="flex items-center justify-between px-3 py-2 bg-white border-b text-sm">
-    <span class="font-mono text-xs text-gray-500 truncate max-w-[200px]">
+  <div class="flex items-center justify-between px-3 py-2 bg-base-panel border-b border-edge text-sm shrink-0">
+    <span class="font-mono text-xs text-tsecondary truncate max-w-[200px]">
       {{ displayOrigin }}
     </span>
     <div
@@ -9,13 +9,13 @@
     >
       <span
         class="inline-block w-2 h-2 rounded-full"
-        :class="hasProjectContext ? 'bg-green-500' : 'bg-yellow-400'"
+        :class="hasProjectContext ? 'bg-success' : 'bg-warning'"
       />
-      <span class="text-xs" :class="hasProjectContext ? 'text-green-700' : 'text-yellow-700'">
+      <span class="text-xs" :class="hasProjectContext ? 'text-success' : 'text-warning'">
         {{ hasProjectContext ? '已绑定需求文档' : '未上传需求文档' }}
       </span>
     </div>
-    <div v-else class="text-xs text-orange-600">
+    <div v-else class="text-xs text-warning">
       ⚠ 仅支持 localhost 开发环境
     </div>
   </div>

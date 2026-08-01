@@ -1,8 +1,8 @@
 <template>
-  <div class="flex items-start gap-2 px-3 py-2 border-b border-gray-100 text-xs hover:bg-gray-50 group">
+  <div class="flex items-start gap-2.5 px-3 py-2.5 border-b border-edge text-xs hover:bg-base-hover transition-colors group animate-fade-in">
     <!-- 类型图标 -->
     <span
-      class="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] shrink-0 mt-0.5"
+      class="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] shrink-0 mt-0.5 shadow-sm"
       :class="typeClass"
     >
       {{ typeIcon }}
@@ -10,20 +10,20 @@
 
     <!-- 内容 -->
     <div class="flex-1 min-w-0">
-      <div class="font-medium text-gray-800">
+      <div class="font-medium text-tprimary">
         {{ typeLabel }}
       </div>
-      <div class="text-gray-500 truncate">
+      <div class="text-tsecondary truncate mt-0.5">
         {{ summary }}
       </div>
-      <div class="text-gray-400 mt-0.5">
+      <div class="text-tdisabled mt-0.5 text-[11px]">
         {{ time }}
       </div>
     </div>
 
     <!-- 删除按钮 -->
     <button
-      class="shrink-0 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+      class="shrink-0 text-tdisabled hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
       @click="$emit('remove', index)"
     >
       ✕

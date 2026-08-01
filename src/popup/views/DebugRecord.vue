@@ -7,20 +7,20 @@
     />
 
     <!-- 控制按钮 -->
-    <div class="flex items-center gap-3 px-3 py-2 border-b">
+    <div class="flex items-center gap-3 px-3 py-2.5 border-b border-edge bg-base-panel">
       <button
-        class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
+        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98]"
         :class="store.isRecording
-          ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse'
-          : 'bg-blue-500 text-white hover:bg-blue-600'"
+          ? 'bg-danger text-white hover:bg-danger/80 animate-pulse-rec'
+          : 'bg-accent text-white hover:bg-accent-hover'"
         @click="toggleRecording"
       >
         {{ store.isRecording ? '⏹ 停止录制' : '⏺ 开始录制' }}
       </button>
 
       <button
-        class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        :class="store.isAnalyzing ? 'bg-gray-400 text-white' : 'bg-green-500 text-white hover:bg-green-600'"
+        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]"
+        :class="store.isAnalyzing ? 'bg-base-active text-tdisabled' : 'bg-success text-base hover:bg-success/80'"
         :disabled="store.liveRecords.length === 0 || store.isAnalyzing"
         @click="handleAnalyze"
       >
@@ -29,25 +29,30 @@
     </div>
 
     <!-- 预期效果输入 -->
-    <div v-if="store.liveRecords.length > 0" class="px-3 py-2 border-b bg-blue-50">
-      <label class="text-xs font-medium text-blue-700 block mb-1">
+    <div v-if="store.liveRecords.length > 0" class="px-3 py-2 border-b border-edge bg-accent-soft">
+      <label class="text-xs font-medium text-accent block mb-1">
         🎯 预期效果（可选）
       </label>
       <input
         v-model="store.expectedEffect"
-        class="w-full px-2 py-1.5 border border-blue-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+        class="w-full px-2.5 py-1.5 border border-edge rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-base-panel text-tprimary placeholder:text-tdisabled"
         placeholder="如：点击登录后应该跳转到仪表盘"
       />
     </div>
 
     <!-- 实时日志列表 -->
     <div class="flex-1 overflow-y-auto">
-      <div v-if="store.liveRecords.length === 0 && !store.isRecording" class="p-6 text-center text-gray-400 text-sm">
-        <p class="mb-1">暂无操作记录</p>
-        <p class="text-xs">点击「开始录制」后在页面操作即可捕获</p>
-      </div>
-      <div v-else-if="store.liveRecords.length === 0 && store.isRecording" class="p-6 text-center text-gray-400 text-sm">
-        <p>⏳ 录制中，等待页面操作...</p>
+      <EmptyState
+        v-if="store.liveRecords.length === 0 && !store.isRecording"
+        icon="🎙"
+        title="暂无操作记录"
+        description="点击「开始录制」后在页面操作即可捕获"
+      />
+      <div v-else-if="store.liveRecords.length === 0 && store.isRecording" class="py-10 text-center">
+        <div class="text-2xl mb-2 inline-flex items-center gap-2 text-danger">
+          <span class="w-2.5 h-2.5 rounded-full bg-danger animate-pulse-rec" />
+          <span class="text-xs font-medium">录制中，等待页面操作...</span>
+        </div>
       </div>
       <LogItem
         v-for="(record, idx) in store.liveRecords"
@@ -59,11 +64,11 @@
     </div>
 
     <!-- 结果区域 -->
-    <div v-if="analysisResult !== null" class="border-t max-h-[240px] overflow-y-auto">
-      <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border-b sticky top-0">
-        <span class="text-xs font-medium text-gray-600">AI 分析结果</span>
+    <div v-if="analysisResult !== null" class="border-t border-edge max-h-[240px] overflow-y-auto bg-base-panel">
+      <div class="flex items-center justify-between px-3 py-2 bg-base-hover border-b border-edge sticky top-0">
+        <span class="text-xs font-medium text-accent">🤖 AI 分析结果</span>
         <button
-          class="text-xs text-gray-400 hover:text-gray-600"
+          class="text-xs text-tsecondary hover:text-tprimary transition-colors"
           @click="analysisResult = null"
         >
           收起
@@ -82,6 +87,8 @@ import { useAppStore } from '@/stores/useAppStore'
 import StatusBar from '@/popup/components/StatusBar.vue'
 import LogItem from '@/popup/components/LogItem.vue'
 import MarkdownRenderer from '@/popup/components/MarkdownRenderer.vue'
+import EmptyState from '@/popup/components/EmptyState.vue'
+import { showToast } from '@/popup/components/toastBus'
 
 const store = useAppStore()
 const analysisResult = ref<string | null>(null)
@@ -98,8 +105,8 @@ async function handleAnalyze() {
   const result = await store.analyzeCurrentRecording()
   if (result === null) return
   // 检查是否是错误信息
-  if (result.startsWith('请前往') || result.startsWith('暂无') || result.startsWith('AI 请求失败') || result.startsWith('网络连接失败')) {
-    alert(result)
+  if (result.startsWith('请前往') || result.startsWith('暂无') || result.startsWith('AI 请求失败') || result.startsWith('网络连接失败') || result.startsWith('接口地址') || result.startsWith('AI 返回')) {
+    showToast('error', result)
     return
   }
   analysisResult.value = result

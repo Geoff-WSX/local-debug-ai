@@ -3,27 +3,27 @@
     <div v-for="(block, i) in blocks" :key="i" class="mb-2">
       <!-- 代码块 -->
       <div v-if="block.type === 'code'" class="relative group">
-        <pre class="bg-gray-900 text-gray-100 rounded-lg p-3 overflow-x-auto text-xs"><code>{{ block.content }}</code></pre>
+        <pre class="bg-base-active text-tprimary rounded-lg p-3 overflow-x-auto text-xs"><code>{{ block.content }}</code></pre>
         <button
-          class="absolute top-2 right-2 px-2 py-1 text-[10px] bg-gray-700 text-gray-300 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-600"
+          class="absolute top-2 right-2 px-2 py-1 text-[10px] bg-base-active text-tsecondary rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-edge"
           @click="copyCode(block.content)"
         >
           {{ block.copied ? '已复制' : '复制' }}
         </button>
       </div>
       <!-- 标题 -->
-      <h1 v-else-if="block.type === 'h1'" class="text-sm font-bold text-gray-900 mt-3 mb-1">{{ block.content }}</h1>
-      <h2 v-else-if="block.type === 'h2'" class="text-sm font-semibold text-gray-800 mt-2 mb-1">{{ block.content }}</h2>
-      <h3 v-else-if="block.type === 'h3'" class="text-xs font-semibold text-gray-800 mt-2 mb-1">{{ block.content }}</h3>
+      <h1 v-else-if="block.type === 'h1'" class="text-sm font-bold text-tprimary mt-3 mb-1">{{ block.content }}</h1>
+      <h2 v-else-if="block.type === 'h2'" class="text-sm font-semibold text-tprimary mt-2 mb-1">{{ block.content }}</h2>
+      <h3 v-else-if="block.type === 'h3'" class="text-xs font-semibold text-tprimary mt-2 mb-1">{{ block.content }}</h3>
       <!-- 列表项 -->
       <div v-else-if="block.type === 'li'" class="flex gap-1.5 pl-3">
-        <span class="text-gray-400 shrink-0">•</span>
+        <span class="text-tdisabled shrink-0">•</span>
         <span>{{ block.content }}</span>
       </div>
       <!-- 普通段落 -->
-      <p v-else class="text-gray-700">{{ block.content }}</p>
+      <p v-else class="text-tsecondary">{{ block.content }}</p>
     </div>
-    <div v-if="!blocks.length" class="text-gray-400 italic">
+    <div v-if="!blocks.length" class="text-tdisabled italic">
       暂无分析结果
     </div>
   </div>

@@ -1,20 +1,20 @@
 <template>
   <div class="flex flex-col h-full">
     <!-- 顶部操作栏 -->
-    <div class="flex items-center justify-between px-3 py-2 border-b bg-gray-50">
-      <span class="text-xs text-gray-500">
+    <div class="flex items-center justify-between px-3 py-2 border-b bg-base-panel">
+      <span class="text-xs text-tsecondary">
         共 {{ store.originSession.analysisHistory.length }} 条记录
       </span>
       <div class="flex gap-2">
         <button
-          class="text-xs text-gray-500 hover:text-blue-600 transition-colors"
+          class="text-xs text-tsecondary hover:text-accent transition-colors"
           :disabled="store.originSession.analysisHistory.length === 0"
           @click="handleExport"
         >
           📥 导出
         </button>
         <button
-          class="text-xs text-red-500 hover:text-red-700 transition-colors"
+          class="text-xs text-danger hover:text-danger/80 transition-colors"
           :disabled="store.originSession.analysisHistory.length === 0"
           @click="handleClearAll"
         >
@@ -25,7 +25,7 @@
 
     <!-- 历史列表 -->
     <div class="flex-1 overflow-y-auto">
-      <div v-if="store.originSession.analysisHistory.length === 0" class="p-8 text-center text-gray-400 text-sm">
+      <div v-if="store.originSession.analysisHistory.length === 0" class="p-8 text-center text-tdisabled text-sm">
         <p>暂无历史记录</p>
         <p class="text-xs mt-1">完成 AI 分析后记录将自动保存至此</p>
       </div>
@@ -33,26 +33,26 @@
       <div
         v-for="(record, idx) in sortedHistory"
         :key="record.timestamp"
-        class="border-b border-gray-100"
+        class="border-b border-edge"
       >
         <!-- 摘要行（点击展开） -->
         <div
-          class="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+          class="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-base-panel transition-colors"
           @click="toggleExpand(record.timestamp)"
         >
-          <span class="text-xs text-gray-400 shrink-0">{{ expanded.has(record.timestamp) ? '▼' : '▶' }}</span>
-          <span class="text-xs text-gray-500 shrink-0">{{ formatTimestamp(record.timestamp) }}</span>
+          <span class="text-xs text-tdisabled shrink-0">{{ expanded.has(record.timestamp) ? '▼' : '▶' }}</span>
+          <span class="text-xs text-tsecondary shrink-0">{{ formatTimestamp(record.timestamp) }}</span>
           <span
             v-if="!record.result"
-            class="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded shrink-0"
+            class="text-[10px] px-1.5 py-0.5 bg-warning-soft text-warning rounded shrink-0"
           >
             未分析
           </span>
-          <span class="text-xs text-gray-400 truncate flex-1">
+          <span class="text-xs text-tdisabled truncate flex-1">
             {{ record.records.length }} 条操作记录
           </span>
           <button
-            class="text-xs text-gray-300 hover:text-red-500 shrink-0"
+            class="text-xs text-tdisabled hover:text-danger shrink-0"
             @click.stop="handleDelete(record.timestamp)"
           >
             ✕
@@ -61,19 +61,19 @@
 
         <!-- 展开详情 -->
         <div v-if="expanded.has(record.timestamp)" class="px-4 pb-3 space-y-2">
-          <div class="text-xs text-gray-500 font-medium">📋 操作日志</div>
-          <div class="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto text-xs text-gray-600 space-y-1">
+          <div class="text-xs text-tsecondary font-medium">📋 操作日志</div>
+          <div class="bg-base-panel rounded p-2 max-h-32 overflow-y-auto text-xs text-tsecondary space-y-1">
             <div v-for="(op, i) in record.records" :key="i" class="truncate">
-              <span class="text-gray-400">[{{ op.type }}]</span>
+              <span class="text-tdisabled">[{{ op.type }}]</span>
               {{ op.targetText || op.errorMsg || op.toUrl || '(无详情)' }}
             </div>
-            <div v-if="record.records.length === 0" class="text-gray-400">无操作记录</div>
+            <div v-if="record.records.length === 0" class="text-tdisabled">无操作记录</div>
           </div>
-          <div class="text-xs text-gray-500 font-medium">🤖 AI 诊断结果</div>
+          <div class="text-xs text-tsecondary font-medium">🤖 AI 诊断结果</div>
           <div v-if="record.result" class="max-h-48 overflow-y-auto">
             <MarkdownRenderer :content="record.result" />
           </div>
-          <div v-else class="text-xs text-yellow-600 bg-yellow-50 rounded p-2">
+          <div v-else class="text-xs text-warning bg-warning-soft rounded p-2">
             尚未分析 — 可返回「调试录制」页点击 AI 分析
           </div>
         </div>
