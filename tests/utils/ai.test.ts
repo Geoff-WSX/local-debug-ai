@@ -6,14 +6,14 @@ describe('ai', () => {
   describe('buildSystemPrompt', () => {
     it('should include project context when provided', () => {
       const prompt = buildSystemPrompt('用户需要登录后看到仪表盘', [])
-      expect(prompt).toContain('=====项目业务需求文档=====')
+      expect(prompt).toContain('=====项目简介=====')
       expect(prompt).toContain('用户需要登录后看到仪表盘')
-      expect(prompt).not.toContain('暂无项目业务需求文档')
+      expect(prompt).not.toContain('暂无项目简介')
     })
 
     it('should use fallback text when project context is empty', () => {
       const prompt = buildSystemPrompt('', [])
-      expect(prompt).toContain('暂无项目业务需求文档')
+      expect(prompt).toContain('暂无项目简介')
       expect(prompt).toContain('仅基于前端运行日志排查代码错误')
     })
 
@@ -28,7 +28,7 @@ describe('ai', () => {
     })
 
     it('should contain the fixed prompt structure', () => {
-      const prompt = buildSystemPrompt('需求文档内容', [])
+      const prompt = buildSystemPrompt('项目简介内容', [])
       expect(prompt).toContain('你是资深前端调试工程师')
       expect(prompt).toContain('### 1. 异常根因汇总')
       expect(prompt).toContain('### 2. 完整修复方案')
@@ -39,19 +39,19 @@ describe('ai', () => {
       const records: OperationItem[] = [
         { type: 'route_change', timestamp: 2000, pageUrl: '/page1', fromUrl: '/page1', toUrl: '/page2' },
       ]
-      const prompt = buildSystemPrompt('需求文档', records)
-      expect(prompt).toContain('=====项目业务需求文档=====')
+      const prompt = buildSystemPrompt('项目简介', records)
+      expect(prompt).toContain('=====项目简介=====')
       expect(prompt).toContain('=====用户页面时序操作日志=====')
     })
 
     it('should include expected effect when provided', () => {
-      const prompt = buildSystemPrompt('需求文档', [], '点击登录后跳转到仪表盘')
+      const prompt = buildSystemPrompt('项目简介', [], '点击登录后跳转到仪表盘')
       expect(prompt).toContain('=====用户预期效果=====')
       expect(prompt).toContain('点击登录后跳转到仪表盘')
     })
 
     it('should not include expected effect section when not provided', () => {
-      const prompt = buildSystemPrompt('需求文档', [])
+      const prompt = buildSystemPrompt('项目简介', [])
       expect(prompt).not.toContain('用户预期效果')
     })
   })

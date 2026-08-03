@@ -65,7 +65,7 @@ const toastRef = ref<InstanceType<typeof Toast> | null>(null)
 
 const tabs = [
   { label: '调试录制', icon: 'mic' },
-  { label: '项目上下文', icon: 'doc' },
+  { label: '项目简介', icon: 'doc' },
   { label: '设置中心', icon: 'gear' },
   { label: '历史记录', icon: 'history' },
 ]

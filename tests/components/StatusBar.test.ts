@@ -16,7 +16,7 @@ describe('StatusBar.vue', () => {
       },
     })
     expect(wrapper.text()).toContain('localhost:5173')
-    expect(wrapper.text()).toContain('已绑定需求文档')
+    expect(wrapper.text()).toContain('已填写项目简介')
   })
 
   it('should show yellow warning when no project context', () => {
@@ -26,7 +26,7 @@ describe('StatusBar.vue', () => {
         hasProjectContext: false,
       },
     })
-    expect(wrapper.text()).toContain('未上传需求文档')
+    expect(wrapper.text()).toContain('未填写项目简介')
   })
 
   it('should show localhost hint for non-localhost origins', () => {

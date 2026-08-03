@@ -12,7 +12,7 @@
         :class="hasProjectContext ? 'bg-success' : 'bg-warning'"
       />
       <span class="text-xs" :class="hasProjectContext ? 'text-success' : 'text-warning'">
-        {{ hasProjectContext ? '已绑定需求文档' : '未上传需求文档' }}
+        {{ hasProjectContext ? '已填写项目简介' : '未填写项目简介' }}
       </span>
     </div>
     <div v-else class="text-xs text-warning">

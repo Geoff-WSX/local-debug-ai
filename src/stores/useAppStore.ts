@@ -181,7 +181,7 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  // ===== 项目上下文 =====
+  // ===== 项目简介 =====
   async function saveProjectContext(content: string) {
     originSession.value.projectContext = content
     await storage.setOriginSession(currentOrigin.value, { projectContext: content })

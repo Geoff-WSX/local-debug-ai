@@ -14,17 +14,17 @@ export function buildApiUrl(config: Pick<ModelConfig, 'baseUrl' | 'apiPath'>): s
  */
 export function buildSystemPrompt(projectContext: string, records: OperationItem[], expectedEffect?: string): string {
   const contextBlock = projectContext
-    ? `=====项目业务需求文档=====\n${projectContext}`
-    : '暂无项目业务需求文档，仅基于前端运行日志排查代码错误，无法校验业务交互合规性'
+    ? `=====项目简介=====\n${projectContext}`
+    : '暂无项目简介，仅基于前端运行日志排查代码错误，无法校验业务交互合规性'
 
   const effectBlock = expectedEffect
     ? `\n\n=====用户预期效果=====\n${expectedEffect}`
     : ''
 
   return `你是资深前端调试工程师。
-对照【项目业务需求文档】+ 用户页面时序操作日志，核对实际交互与产品需求是否一致，找出全部前端问题。
+参考【项目简介】+ 用户页面时序操作日志，审核实际交互与产品业务逻辑是否一致，找出全部前端问题。
 问题分为两类：
-1. 业务逻辑异常：页面表现不符合项目规定交互规则
+1. 业务逻辑异常：页面表现与项目简介描述的业务规则不符
 2. 代码运行异常：JS报错、点击失效、路由跳转错误等前端代码BUG
 
 输出必须严格分为两大板块，禁止寒暄、多余文字、闲聊拓展：
