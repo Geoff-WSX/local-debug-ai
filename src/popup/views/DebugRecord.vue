@@ -20,12 +20,18 @@
       </button>
 
       <button
-        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
-        :class="store.isAnalyzing ? 'bg-base-active text-tdisabled' : 'bg-success text-base hover:bg-success/80'"
+        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+        :class="store.isAnalyzing ? 'bg-base-active text-tsecondary' : 'bg-success text-base hover:bg-success/80'"
         :disabled="store.liveRecords.length === 0 || store.isAnalyzing"
         @click="handleAnalyze"
       >
-        <AppIcon :name="analyzeIcon" :size="14" />
+        <AppIcon
+          v-if="store.isAnalyzing"
+          :name="analyzeIcon"
+          :size="14"
+          class="animate-spin text-accent"
+        />
+        <AppIcon v-else name="analyze" :size="14" />
         {{ store.isAnalyzing ? '分析中...' : 'AI 分析' }}
       </button>
     </div>
@@ -67,23 +73,25 @@
     </div>
 
     <!-- 结果区域 -->
-    <div v-if="analysisResult !== null" class="border-t border-edge max-h-[240px] overflow-y-auto bg-base-panel">
-      <div class="flex items-center justify-between px-3 py-2 bg-base-hover border-b border-edge sticky top-0">
-        <span class="text-xs font-medium text-accent flex items-center gap-1.5">
-          <AppIcon name="analyze" :size="13" />
-          AI 分析结果
-        </span>
-        <button
-          class="text-xs text-tsecondary hover:text-tprimary transition-colors"
-          @click="analysisResult = null"
-        >
-          收起
-        </button>
+    <Transition name="result">
+      <div v-if="analysisResult !== null" class="border-t border-edge max-h-[260px] overflow-y-auto bg-base-panel">
+        <div class="flex items-center justify-between px-3 py-2 bg-base-hover border-b border-edge sticky top-0">
+          <span class="text-xs font-medium text-accent flex items-center gap-1.5">
+            <AppIcon name="analyze" :size="13" />
+            AI 分析结果
+          </span>
+          <button
+            class="text-xs text-tsecondary hover:text-tprimary transition-colors flex items-center gap-1"
+            @click="analysisResult = null"
+          >
+            <AppIcon name="close" :size="12" /> 收起
+          </button>
+        </div>
+        <div class="p-3">
+          <MarkdownRenderer :content="analysisResult" />
+        </div>
       </div>
-      <div class="p-3">
-        <MarkdownRenderer :content="analysisResult" />
-      </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -100,7 +108,7 @@ import { showToast } from '@/popup/components/toastBus'
 const store = useAppStore()
 const analysisResult = ref<string | null>(null)
 
-const analyzeIcon = computed(() => store.isAnalyzing ? 'close' : 'analyze')
+const analyzeIcon = computed(() => store.isAnalyzing ? 'loader' : 'analyze')
 
 function toggleRecording() {
   if (store.isRecording) {
@@ -161,3 +169,13 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.result-enter-active {
+  transition: all 0.3s ease;
+}
+.result-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+</style>

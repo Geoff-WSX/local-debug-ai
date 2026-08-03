@@ -135,6 +135,10 @@ const icons: Record<string, IconDef> = {
       'M3 6h.01M3 12h.01M3 18h.01',
     ],
   },
+  loader: {  // 加载圆弧
+    viewBox: '0 0 24 24',
+    paths: ['M12 3a9 9 0 1 0 9 9'],
+  },
 }
 
 const strokeFill = (name: string) => {
