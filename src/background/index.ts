@@ -137,7 +137,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     if (tab.url && (tab.url.startsWith('http://localhost') || tab.url.startsWith('http://127.0.0.1'))) {
     chrome.runtime.sendMessage({ type: 'TAB_CHANGED', origin: extractOrigin(tab.url) }).catch(() => {})
   } else {
-    try { await chrome.sidePanel.close() } catch {}
+    try { await chrome.sidePanel.close({ windowId: activeInfo.windowId }) } catch {}
   }
   } catch {}
 })

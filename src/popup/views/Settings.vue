@@ -110,15 +110,15 @@
           placeholder="gpt-4o-mini"
         />
       </div>
-      <div class="flex gap-2">
+<div class="flex gap-2 pt-3 border-t border-edge">
         <button
-          class="flex-1 py-2 bg-accent-soft0 text-white rounded-lg text-sm hover:bg-accent-hover"
+          class="flex-1 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover"
           @click="saveModel"
         >
           💾 保存模型
         </button>
         <button
-          class="flex-1 py-2 bg-success text-white rounded-lg text-sm hover:bg-success/80 disabled:opacity-40"
+          class="flex-1 py-2 bg-success text-base rounded-lg text-sm hover:bg-success/80 disabled:opacity-40"
           :disabled="!canTest"
           @click="handleTest"
         >

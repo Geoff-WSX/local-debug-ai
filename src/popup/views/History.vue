@@ -52,6 +52,21 @@
             {{ record.records.length }} 条操作记录
           </span>
           <button
+            v-if="analyzingTs === record.timestamp"
+            class="text-[10px] px-2 py-1 bg-accent text-white rounded shrink-0 animate-pulse"
+            @click.stop
+          >
+            分析中...
+          </button>
+          <button
+            v-else
+            class="text-[10px] px-2 py-1 bg-accent text-white rounded hover:bg-accent-hover shrink-0"
+            :disabled="!record.records.length"
+            @click.stop="handleAnalyze(record.timestamp)"
+          >
+            🤖 分析
+          </button>
+          <button
             class="text-xs text-tdisabled hover:text-danger shrink-0"
             @click.stop="handleDelete(record.timestamp)"
           >
@@ -59,24 +74,26 @@
           </button>
         </div>
 
-        <!-- 展开详情 -->
-        <div v-if="expanded.has(record.timestamp)" class="px-4 pb-3 space-y-2">
-          <div class="text-xs text-tsecondary font-medium">📋 操作日志</div>
-          <div class="bg-base-panel rounded p-2 max-h-32 overflow-y-auto text-xs text-tsecondary space-y-1">
-            <div v-for="(op, i) in record.records" :key="i" class="truncate">
-              <span class="text-tdisabled">[{{ op.type }}]</span>
-              {{ op.targetText || op.errorMsg || op.toUrl || '(无详情)' }}
+        <!-- 展开详情（带过渡动画） -->
+        <Transition name="expand">
+          <div v-if="expanded.has(record.timestamp)" class="px-4 pb-3 space-y-2 overflow-hidden">
+            <div class="text-xs text-tsecondary font-medium">📋 操作日志</div>
+            <div class="bg-base-panel rounded p-2 max-h-32 overflow-y-auto text-xs text-tsecondary space-y-1">
+              <div v-for="(op, i) in record.records" :key="i" class="truncate">
+                <span class="text-tdisabled">[{{ op.type }}]</span>
+                {{ op.targetText || op.errorMsg || op.toUrl || '(无详情)' }}
+              </div>
+              <div v-if="record.records.length === 0" class="text-tdisabled">无操作记录</div>
             </div>
-            <div v-if="record.records.length === 0" class="text-tdisabled">无操作记录</div>
+            <div class="text-xs text-tsecondary font-medium">🤖 AI 诊断结果</div>
+            <div v-if="record.result" class="max-h-48 overflow-y-auto">
+              <MarkdownRenderer :content="record.result" />
+            </div>
+            <div v-else class="text-xs text-warning bg-warning-soft rounded p-2">
+              尚未分析 — 点击右侧「🤖 分析」按钮即可分析
+            </div>
           </div>
-          <div class="text-xs text-tsecondary font-medium">🤖 AI 诊断结果</div>
-          <div v-if="record.result" class="max-h-48 overflow-y-auto">
-            <MarkdownRenderer :content="record.result" />
-          </div>
-          <div v-else class="text-xs text-warning bg-warning-soft rounded p-2">
-            尚未分析 — 可返回「调试录制」页点击 AI 分析
-          </div>
-        </div>
+        </Transition>
       </div>
     </div>
   </div>
@@ -87,9 +104,11 @@ import { computed, ref } from 'vue'
 import { useAppStore } from '@/stores/useAppStore'
 import { formatTimestamp } from '@/utils/formatter'
 import MarkdownRenderer from '@/popup/components/MarkdownRenderer.vue'
+import { showToast } from '@/popup/components/toastBus'
 
 const store = useAppStore()
 const expanded = ref<Set<number>>(new Set())
+const analyzingTs = ref<number | null>(null)
 
 const sortedHistory = computed(() => {
   return [...store.originSession.analysisHistory].sort((a, b) => b.timestamp - a.timestamp)
@@ -101,6 +120,25 @@ function toggleExpand(ts: number) {
   } else {
     expanded.value.add(ts)
   }
+}
+
+// 重新分析某条历史记录
+async function handleAnalyze(ts: number) {
+  if (analyzingTs.value !== null) return
+  analyzingTs.value = ts
+  const result = await store.analyzeHistoryItem(ts)
+  analyzingTs.value = null
+
+  if (result === null) return
+  // 错误提示
+  if (result.startsWith('请前往') || result.startsWith('暂无') || result.startsWith('AI 请求失败')
+    || result.startsWith('网络连接失败') || result.startsWith('接口地址') || result.startsWith('AI 返回')) {
+    showToast('error', result)
+    return
+  }
+  showToast('success', '分析完成')
+  // 自动展开显示结果
+  expanded.value.add(ts)
 }
 
 async function handleDelete(ts: number) {
@@ -136,3 +174,20 @@ async function handleExport() {
   URL.revokeObjectURL(url)
 }
 </script>
+
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.25s ease;
+}
+.expand-enter-from,
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+.expand-enter-to,
+.expand-leave-from {
+  opacity: 1;
+  max-height: 500px;
+}
+</style>

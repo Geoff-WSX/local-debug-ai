@@ -1,4 +1,4 @@
-import type { OperationItem } from '../types'
+import type { OperationItem, OriginSession } from '../types'
 import { getXPath } from '../utils/xpath'
 
 const RECORDING_KEY = 'recordingStatuses'
@@ -22,8 +22,8 @@ async function sendRecord(item: OperationItem) {
 
       // 时间戳 > 0 表示录制中（更健壮：不存在或 0 都是未录制）
       if ((statuses[origin] || 0) > 0) {
-        const existing = await chrome.storage.local.get(origin)
-        const session = existing[origin] || {
+        const existing = await chrome.storage.local.get(origin) as Record<string, OriginSession>
+        const session: OriginSession = existing[origin] || {
           projectContext: '',
           currentRecording: [],
           analysisHistory: [],
@@ -115,8 +115,12 @@ window.addEventListener('popstate', () => {
 // 保护：只在页面刚加载时清空一次；若记录时间晚于本页加载时间（新录制），则不删除
 const pageOrigin = new URL(location.href).host
 const pageLoadTime = Date.now()
-chrome.storage.local.get(pageOrigin).then((d) => {
-  const session = d[pageOrigin] || {}
+chrome.storage.local.get(pageOrigin).then((d: any) => {
+  const session: OriginSession = d[pageOrigin] || {
+    projectContext: '',
+    currentRecording: [],
+    analysisHistory: [],
+  }
   const records = session.currentRecording || []
   // 只清空页面加载前就已存在的旧记录（时间戳早于页面加载）
   const staleRecords = records.filter((r: any) => (r.timestamp || 0) < pageLoadTime)

@@ -83,7 +83,7 @@ describe('useAppStore', () => {
     const store = useAppStore()
     store.currentOrigin = 'localhost:5173'
     store.liveRecords = [{ type: 'click', timestamp: 1, pageUrl: '/' } as OperationItem]
-    chrome.runtime.sendMessage = vi.fn()
+    ;(chrome.runtime.sendMessage as any) = vi.fn()
 
     await store.startRecording()
 
@@ -101,7 +101,7 @@ describe('useAppStore', () => {
     store.isRecording = true
     store.currentOrigin = 'localhost:5173'
     store.originSession = { projectContext: '', currentRecording: [{ type: 'click', timestamp: 1, pageUrl: '/' } as OperationItem], analysisHistory: [] }
-    chrome.runtime.sendMessage = vi.fn()
+    ;(chrome.runtime.sendMessage as any) = vi.fn()
 
     // mock reload 返回的数据
     const loadedSession: OriginSession = {
@@ -124,14 +124,6 @@ describe('useAppStore', () => {
     expect(chrome.runtime.sendMessage).not.toHaveBeenCalled()
     // 停止后重新加载录制数据（保留显示）
     expect(store.liveRecords).toHaveLength(2)
-  })
-
-  it('addLiveRecord should append record to liveRecords', () => {
-    const store = useAppStore()
-    const record: OperationItem = { type: 'click', timestamp: 1000, pageUrl: '/home', targetText: '按钮' }
-    store.addLiveRecord(record)
-    expect(store.liveRecords).toHaveLength(1)
-    expect(store.liveRecords[0].targetText).toBe('按钮')
   })
 
   it('removeLiveRecord should remove record by index', () => {
@@ -221,6 +213,37 @@ describe('useAppStore', () => {
     expect(storage.appendHistory).not.toHaveBeenCalled()
     expect(store.originSession.analysisHistory[0].result).toBe('# Updated Result')
     expect(store.originSession.currentRecording).toEqual([])
+  })
+
+  it('analyzeHistoryItem should analyze specific record and update result', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '# Test',
+      currentRecording: [],
+      analysisHistory: [
+        { timestamp: 500, records: [{ type: 'click', timestamp: 1, pageUrl: '/' }], result: '' },
+        { timestamp: 600, records: [{ type: 'click', timestamp: 2, pageUrl: '/' }], result: 'old' },
+      ],
+    }
+    mockGetActiveModel.mockResolvedValue({
+      id: 'm1', name: 'Test', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
+    })
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: vi.fn().mockReturnValue('application/json') },
+      text: () => Promise.resolve(JSON.stringify({ choices: [{ message: { content: '# Reanalyzed' } }] })),
+    })
+
+    const result = await store.analyzeHistoryItem(500)
+
+    expect(result).toBe('# Reanalyzed')
+    expect(store.originSession.analysisHistory[0].result).toBe('# Reanalyzed')
+    // 只更新目标记录，不影响其他条
+    expect(store.originSession.analysisHistory[1].result).toBe('old')
+    expect(mockUpdateHistoryResult).toHaveBeenCalledWith('localhost:5173', 500, '# Reanalyzed')
   })
 
   it('saveProjectContext should update project context', async () => {

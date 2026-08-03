@@ -7,8 +7,8 @@ import { DEFAULT_GLOBAL_CONFIG, createDefaultOriginSession, genModelId } from '.
  * 读取全局配置（兼容旧版单一模型格式，自动迁移为模型列表）
  */
 export async function getGlobalConfig(): Promise<GlobalConfig> {
-  const data = await chrome.storage.local.get('global')
-  const stored = data.global
+  const data = await chrome.storage.local.get('global') as Record<string, any>
+  const stored: any = data.global
 
   // 无配置 → 默认
   if (!stored) {

@@ -60,34 +60,23 @@ export const useAppStore = defineStore('app', () => {
     liveRecords.value = [...loaded.currentRecording]
   }
 
-  function addLiveRecord(record: OperationItem) {
-    liveRecords.value.push(record)
-  }
-
   function removeLiveRecord(index: number) {
     liveRecords.value.splice(index, 1)
   }
 
   // ===== AI 分析 =====
-  async function analyzeCurrentRecording(): Promise<string | null> {
-    // 使用当前激活模型（每次只能启动一个）
+  // 私有的 AI 调用核心：执行 fetch 分析记录
+  async function _callAI(records: OperationItem[], projectContext: string, effect: string): Promise<{ result?: string; error?: string }> {
     const activeModel = await storage.getActiveModel()
     if (!activeModel) {
-      return '请先在设置中心配置并激活模型'
+      return { error: '请先在设置中心配置并激活模型' }
     }
     const apiKey = activeModel.apiKey
-    const error = validateBeforeAnalyze(apiKey, originSession.value.currentRecording)
-    if (error) return error
-
-    isAnalyzing.value = true
+    const err = validateBeforeAnalyze(apiKey, records)
+    if (err) return { error: err }
 
     try {
-      const systemPrompt = buildSystemPrompt(
-        originSession.value.projectContext,
-        originSession.value.currentRecording,
-        expectedEffect.value || undefined,
-      )
-
+      const systemPrompt = buildSystemPrompt(projectContext, records, effect || undefined)
       const response = await fetch(buildApiUrl(activeModel), {
         method: 'POST',
         headers: {
@@ -98,7 +87,7 @@ export const useAppStore = defineStore('app', () => {
           model: activeModel.model,
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: JSON.stringify(originSession.value.currentRecording) },
+            { role: 'user', content: JSON.stringify(records) },
           ],
           temperature: 0.2,
         }),
@@ -106,39 +95,51 @@ export const useAppStore = defineStore('app', () => {
 
       if (!response.ok) {
         const errBody = await response.text()
-        return `AI 请求失败 (${response.status}): ${errBody.slice(0, 300)}`
+        return { error: `AI 请求失败 (${response.status}): ${errBody.slice(0, 300)}` }
       }
 
       const contentType = response.headers?.get?.('content-type') || ''
       const bodyText = await response.text()
 
       if (!contentType.includes('application/json')) {
-        return `接口地址返回了 HTML 页面而非 API 数据。请检查设置中的「API 接口地址」是否正确`
+        return { error: '接口地址返回了 HTML 页面而非 API 数据。请检查设置中的「API 接口地址」是否正确' }
       }
 
       let data: any
       try {
         data = JSON.parse(bodyText)
       } catch {
-        return `AI 返回数据解析失败：服务器返回了非 JSON 格式（${bodyText.slice(0, 200)}）`
+        return { error: `AI 返回数据解析失败：服务器返回了非 JSON 格式（${bodyText.slice(0, 200)}）` }
       }
 
-      const result = data.choices?.[0]?.message?.content || ''
+      return { result: data.choices?.[0]?.message?.content || '' }
+    } catch (err: any) {
+      return { error: `网络连接失败: ${err.message}` }
+    }
+  }
+
+  // 分析当前录制区
+  async function analyzeCurrentRecording(): Promise<string | null> {
+    isAnalyzing.value = true
+    try {
+      const { result, error } = await _callAI(
+        originSession.value.currentRecording,
+        originSession.value.projectContext,
+        expectedEffect.value,
+      )
+      if (error) return error
 
       // 更新对应的未分析历史记录（如果存在），否则新增
       const unanalyzed = await storage.findUnanalyzedHistory(currentOrigin.value)
       if (unanalyzed) {
-        await storage.updateHistoryResult(currentOrigin.value, unanalyzed.timestamp, result)
-        // 同步本地状态
+        await storage.updateHistoryResult(currentOrigin.value, unanalyzed.timestamp, result!)
         const idx = originSession.value.analysisHistory.findIndex((r) => r.timestamp === unanalyzed.timestamp)
-        if (idx !== -1) {
-          originSession.value.analysisHistory[idx].result = result
-        }
+        if (idx !== -1) originSession.value.analysisHistory[idx].result = result!
       } else {
         const record: AnalysisRecord = {
           timestamp: Date.now(),
           records: [...originSession.value.currentRecording],
-          result,
+          result: result!,
         }
         originSession.value.analysisHistory.push(record)
         await storage.appendHistory(currentOrigin.value, record)
@@ -150,9 +151,31 @@ export const useAppStore = defineStore('app', () => {
       expectedEffect.value = ''
       await storage.clearRecording(currentOrigin.value)
 
-      return result
-    } catch (err: any) {
-      return `网络连接失败: ${err.message}`
+      return result!
+    } finally {
+      isAnalyzing.value = false
+    }
+  }
+
+  // 重新分析指定历史记录
+  async function analyzeHistoryItem(timestamp: number, effect?: string): Promise<string | null> {
+    const idx = originSession.value.analysisHistory.findIndex((r) => r.timestamp === timestamp)
+    if (idx === -1) return null
+    const record = originSession.value.analysisHistory[idx]
+
+    isAnalyzing.value = true
+    try {
+      const { result, error } = await _callAI(
+        record.records,
+        originSession.value.projectContext,
+        effect || '',
+      )
+      if (error) return error
+
+      // 更新该条历史结果（不新增）
+      await storage.updateHistoryResult(currentOrigin.value, timestamp, result!)
+      record.result = result!
+      return result!
     } finally {
       isAnalyzing.value = false
     }
@@ -205,9 +228,9 @@ export const useAppStore = defineStore('app', () => {
     startRecording,
     stopRecording,
     reloadRecordingData,
-    addLiveRecord,
     removeLiveRecord,
     analyzeCurrentRecording,
+    analyzeHistoryItem,
     saveProjectContext,
     clearProjectContext,
     deleteHistoryItem,
