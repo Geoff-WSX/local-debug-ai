@@ -26,3 +26,7 @@ Thumbs.db
 # 测试覆盖率
 coverage/
 .zcode/
+
+# 本地工具配置
+.codex/
+.cursor/
