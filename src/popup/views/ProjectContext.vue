@@ -7,7 +7,7 @@
 
     <!-- 文件上传区 -->
     <div
-      class="border-2 border-dashed border-edge rounded-lg p-6 text-center cursor-pointer hover:border-accent transition-colors"
+      class="border border-dashed border-edge rounded-lg p-6 text-center cursor-pointer hover:border-accent transition-colors group"
       @click="triggerUpload"
       @dragover.prevent
       @drop.prevent="handleDrop"
@@ -19,24 +19,27 @@
         class="hidden"
         @change="handleFileSelect"
       />
-      <p class="text-sm text-tsecondary">点击或拖拽上传 .txt / .md 文件</p>
+      <p class="text-sm text-tsecondary flex items-center justify-center gap-2">
+        <AppIcon name="doc" :size="16" class="text-tdisabled group-hover:text-accent transition-colors" />
+        点击或拖拽上传 .txt / .md 文件
+      </p>
     </div>
 
     <!-- 文本编辑区 -->
     <textarea
       v-model="content"
-      class="w-full h-48 p-3 border border-edge rounded-lg text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-accent/50"
+      class="w-full h-48 p-3 border border-edge rounded-lg text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 bg-base-panel text-tprimary placeholder:text-tdisabled"
       placeholder="或在此粘贴项目需求文档内容..."
     />
 
     <!-- 操作按钮 -->
     <div class="flex gap-2">
       <button
-        class="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-40"
+        class="flex-1 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
         :disabled="!content.trim()"
         @click="handleSave"
       >
-        💾 保存文档
+        <AppIcon name="check" :size="14" /> 保存文档
       </button>
       <button
         class="px-4 py-2 bg-base-hover text-tsecondary rounded-lg text-sm hover:bg-base-active transition-colors"
@@ -62,6 +65,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAppStore } from '@/stores/useAppStore'
+import AppIcon from '@/popup/components/AppIcon.vue'
 import { showToast } from '@/popup/components/toastBus'
 
 const store = useAppStore()

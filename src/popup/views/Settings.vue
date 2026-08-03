@@ -53,10 +53,10 @@
       </div>
 
       <button
-        class="w-full py-2 border-2 border-dashed border-edge rounded-lg text-xs text-tsecondary hover:border-accent hover:text-blue-500 transition-colors"
+        class="w-full py-2.5 border border-dashed border-edge rounded-lg text-xs text-tsecondary hover:border-accent hover:text-accent transition-colors flex items-center justify-center gap-1.5"
         @click="startAdd"
       >
-        ＋ 添加模型
+        <AppIcon name="plus" :size="13" /> 添加模型
       </button>
     </div>
 
@@ -112,17 +112,17 @@
       </div>
 <div class="flex gap-2 pt-3 border-t border-edge">
         <button
-          class="flex-1 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover"
+          class="flex-1 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover flex items-center justify-center gap-1.5"
           @click="saveModel"
         >
-          💾 保存模型
+          <AppIcon name="check" :size="14" /> 保存模型
         </button>
         <button
-          class="flex-1 py-2 bg-success text-base rounded-lg text-sm hover:bg-success/80 disabled:opacity-40"
+          class="flex-1 py-2 bg-success text-base rounded-lg text-sm hover:bg-success/80 disabled:opacity-40 flex items-center justify-center gap-1.5"
           :disabled="!canTest"
           @click="handleTest"
         >
-          {{ testing ? '⏳ 测试中...' : '🔗 测试连接' }}
+          {{ testing ? '测试中...' : '测试连接' }}
         </button>
         <button
           class="px-3 py-2 bg-base-hover text-tsecondary rounded-lg text-sm hover:bg-base-active"
@@ -142,20 +142,20 @@
 
     <hr class="border-edge" />
 
-    <h2 class="text-sm font-bold text-tprimary">💾 数据备份</h2>
+    <h2 class="text-sm font-bold text-tprimary">数据备份</h2>
     <p class="text-xs text-tsecondary mb-2">导出配置和所有站点数据，重装后一键恢复</p>
     <div class="flex gap-2">
       <button
-        class="flex-1 py-2 bg-base-active text-white rounded-lg text-sm hover:bg-edge-strong transition-colors"
+        class="flex-1 py-2 bg-base-active text-white rounded-lg text-sm hover:bg-edge-strong transition-colors flex items-center justify-center gap-1.5"
         @click="handleExport"
       >
-        📤 导出配置
+        <AppIcon name="export" :size="13" /> 导出配置
       </button>
       <button
-        class="flex-1 py-2 bg-base-active text-white rounded-lg text-sm hover:bg-edge-strong transition-colors"
+        class="flex-1 py-2 bg-base-active text-white rounded-lg text-sm hover:bg-edge-strong transition-colors flex items-center justify-center gap-1.5"
         @click="triggerImport"
       >
-        📥 导入配置
+        <AppIcon name="plus" :size="13" /> 导入配置
       </button>
       <input
         ref="importInput"
@@ -188,6 +188,7 @@ import {
 import { API_PATH_PRESETS, createDefaultModel } from '@/types'
 import type { ModelConfig } from '@/types'
 import { showToast } from '@/popup/components/toastBus'
+import AppIcon from '@/popup/components/AppIcon.vue'
 
 const store = useAppStore()
 const testing = ref(false)

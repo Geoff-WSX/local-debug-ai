@@ -21,13 +21,13 @@
       <button
         v-for="(tab, idx) in tabs"
         :key="idx"
-        class="flex-1 py-2.5 text-xs font-medium transition-all duration-200 relative flex items-center justify-center gap-1"
+        class="flex-1 py-2.5 text-xs font-medium tracking-wide transition-all duration-200 relative flex items-center justify-center gap-1.5"
         :class="store.activeTab === idx
           ? 'text-accent bg-base-hover'
           : 'text-tsecondary hover:text-tprimary hover:bg-base-hover/50'"
         @click="store.activeTab = idx"
       >
-        <span class="text-sm leading-none">{{ tab.icon }}</span>
+        <AppIcon :name="tab.icon" :size="14" />
         {{ tab.label }}
         <span
           v-if="store.activeTab === idx"
@@ -58,15 +58,16 @@ import Settings from './views/Settings.vue'
 import History from './views/History.vue'
 import Toast from './components/Toast.vue'
 import { setToastInstance } from './components/toastBus'
+import AppIcon from './components/AppIcon.vue'
 
 const store = useAppStore()
 const toastRef = ref<InstanceType<typeof Toast> | null>(null)
 
 const tabs = [
-  { label: '调试录制', icon: '🎙' },
-  { label: '项目上下文', icon: '📄' },
-  { label: '设置中心', icon: '⚙️' },
-  { label: '历史记录', icon: '🕘' },
+  { label: '调试录制', icon: 'mic' },
+  { label: '项目上下文', icon: 'doc' },
+  { label: '设置中心', icon: 'gear' },
+  { label: '历史记录', icon: 'history' },
 ]
 
 onMounted(() => {

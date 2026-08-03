@@ -59,6 +59,11 @@ export default {
         'fade-in': 'fade-in 0.25s ease-out',
         'slide-in-right': 'slide-in-right 0.3s ease-out',
       },
+      boxShadow: {
+        'card': '0 2px 8px rgba(0, 0, 0, 0.35)',
+        'card-hover': '0 4px 16px rgba(0, 0, 0, 0.45)',
+        'pop': '0 8px 24px rgba(0, 0, 0, 0.5)',
+      },
     },
   },
   plugins: [],

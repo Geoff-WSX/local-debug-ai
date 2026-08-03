@@ -9,29 +9,32 @@
     <!-- 控制按钮 -->
     <div class="flex items-center gap-3 px-3 py-2.5 border-b border-edge bg-base-panel">
       <button
-        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98]"
+        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
         :class="store.isRecording
           ? 'bg-danger text-white hover:bg-danger/80 animate-pulse-rec'
           : 'bg-accent text-white hover:bg-accent-hover'"
         @click="toggleRecording"
       >
-        {{ store.isRecording ? '⏹ 停止录制' : '⏺ 开始录制' }}
+        <AppIcon :name="store.isRecording ? 'stop' : 'record'" :size="14" />
+        {{ store.isRecording ? '停止录制' : '开始录制' }}
       </button>
 
       <button
-        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]"
+        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
         :class="store.isAnalyzing ? 'bg-base-active text-tdisabled' : 'bg-success text-base hover:bg-success/80'"
         :disabled="store.liveRecords.length === 0 || store.isAnalyzing"
         @click="handleAnalyze"
       >
-        {{ store.isAnalyzing ? '⏳ 分析中...' : '🤖 一键 AI 分析' }}
+        <AppIcon :name="analyzeIcon" :size="14" />
+        {{ store.isAnalyzing ? '分析中...' : 'AI 分析' }}
       </button>
     </div>
 
     <!-- 预期效果输入 -->
     <div v-if="store.liveRecords.length > 0" class="px-3 py-2 border-b border-edge bg-accent-soft">
-      <label class="text-xs font-medium text-accent block mb-1">
-        🎯 预期效果（可选）
+      <label class="text-xs font-medium text-accent flex items-center gap-1.5 mb-1">
+        <AppIcon name="target" :size="13" />
+        预期效果（可选）
       </label>
       <input
         v-model="store.expectedEffect"
@@ -44,14 +47,14 @@
     <div class="flex-1 overflow-y-auto">
       <EmptyState
         v-if="store.liveRecords.length === 0 && !store.isRecording"
-        icon="🎙"
+        icon="mic"
         title="暂无操作记录"
         description="点击「开始录制」后在页面操作即可捕获"
       />
       <div v-else-if="store.liveRecords.length === 0 && store.isRecording" class="py-10 text-center">
-        <div class="text-2xl mb-2 inline-flex items-center gap-2 text-danger">
+        <div class="text-sm mb-2 inline-flex items-center gap-2 text-danger">
           <span class="w-2.5 h-2.5 rounded-full bg-danger animate-pulse-rec" />
-          <span class="text-xs font-medium">录制中，等待页面操作...</span>
+          <span class="text-xs font-medium tracking-wide">录制中，等待页面操作...</span>
         </div>
       </div>
       <LogItem
@@ -66,7 +69,10 @@
     <!-- 结果区域 -->
     <div v-if="analysisResult !== null" class="border-t border-edge max-h-[240px] overflow-y-auto bg-base-panel">
       <div class="flex items-center justify-between px-3 py-2 bg-base-hover border-b border-edge sticky top-0">
-        <span class="text-xs font-medium text-accent">🤖 AI 分析结果</span>
+        <span class="text-xs font-medium text-accent flex items-center gap-1.5">
+          <AppIcon name="analyze" :size="13" />
+          AI 分析结果
+        </span>
         <button
           class="text-xs text-tsecondary hover:text-tprimary transition-colors"
           @click="analysisResult = null"
@@ -82,16 +88,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/useAppStore'
 import StatusBar from '@/popup/components/StatusBar.vue'
 import LogItem from '@/popup/components/LogItem.vue'
 import MarkdownRenderer from '@/popup/components/MarkdownRenderer.vue'
 import EmptyState from '@/popup/components/EmptyState.vue'
+import AppIcon from '@/popup/components/AppIcon.vue'
 import { showToast } from '@/popup/components/toastBus'
 
 const store = useAppStore()
 const analysisResult = ref<string | null>(null)
+
+const analyzeIcon = computed(() => store.isAnalyzing ? 'close' : 'analyze')
 
 function toggleRecording() {
   if (store.isRecording) {

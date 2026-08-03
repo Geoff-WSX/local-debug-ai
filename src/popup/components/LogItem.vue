@@ -2,15 +2,15 @@
   <div class="flex items-start gap-2.5 px-3 py-2.5 border-b border-edge text-xs hover:bg-base-hover transition-colors group animate-fade-in">
     <!-- 类型图标 -->
     <span
-      class="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] shrink-0 mt-0.5 shadow-sm"
+      class="inline-flex items-center justify-center w-5 h-5 rounded-md shrink-0 mt-0.5"
       :class="typeClass"
     >
-      {{ typeIcon }}
+      <AppIcon :name="typeIcon" :size="12" />
     </span>
 
     <!-- 内容 -->
     <div class="flex-1 min-w-0">
-      <div class="font-medium text-tprimary">
+      <div class="font-medium text-tprimary truncate">
         {{ typeLabel }}
       </div>
       <div class="text-tsecondary truncate mt-0.5">
@@ -26,7 +26,7 @@
       class="shrink-0 text-tdisabled hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
       @click="$emit('remove', index)"
     >
-      ✕
+      <AppIcon name="close" :size="12" />
     </button>
   </div>
 </template>
@@ -35,6 +35,7 @@
 import { computed } from 'vue'
 import type { OperationItem } from '@/types'
 import { formatTimestamp, truncateText } from '@/utils/formatter'
+import AppIcon from '@/popup/components/AppIcon.vue'
 
 const props = defineProps<{
   item: OperationItem
@@ -47,17 +48,17 @@ defineEmits<{
 
 const typeClass = computed(() => {
   switch (props.item.type) {
-    case 'click': return 'bg-blue-500'
-    case 'js_error': return 'bg-red-500'
-    case 'route_change': return 'bg-purple-500'
+    case 'click': return 'bg-accent-soft text-accent'
+    case 'js_error': return 'bg-danger-soft text-danger'
+    case 'route_change': return 'bg-success-soft text-success'
   }
 })
 
 const typeIcon = computed(() => {
   switch (props.item.type) {
-    case 'click': return 'C'
-    case 'js_error': return '!'
-    case 'route_change': return 'R'
+    case 'click': return 'mic'
+    case 'js_error': return 'close'
+    case 'route_change': return 'chevron'
   }
 })
 
