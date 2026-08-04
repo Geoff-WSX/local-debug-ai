@@ -2,10 +2,10 @@
   <div class="markdown-body text-xs leading-relaxed">
     <div v-for="(block, i) in blocks" :key="i" class="mb-2">
       <!-- 代码块 -->
-      <div v-if="block.type === 'code'" class="relative group">
-        <pre class="bg-base-active text-tprimary rounded-lg p-3 overflow-x-auto text-xs"><code>{{ block.content }}</code></pre>
+      <div v-if="block.type === 'code'" class="relative group rounded-lg border border-edge overflow-hidden">
+        <pre class="bg-surface-sunken text-tprimary p-3 overflow-x-auto text-xs leading-relaxed"><code>{{ block.content }}</code></pre>
         <button
-          class="absolute top-2 right-2 px-2 py-1 text-[10px] bg-base-active text-tsecondary rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-edge"
+          class="absolute top-1.5 right-1.5 px-2 py-1 text-[10px] bg-surface-raised text-tsecondary rounded border border-edge opacity-0 group-hover:opacity-100 transition-opacity hover:bg-base-active"
           @click="copyCode(block.content)"
         >
           {{ block.copied ? '已复制' : '复制' }}

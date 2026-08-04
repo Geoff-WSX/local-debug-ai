@@ -1,6 +1,8 @@
 <template>
   <div class="p-4 space-y-5">
-    <h2 class="text-sm font-bold text-tprimary">🔧 模型配置</h2>
+    <h2 class="text-sm font-bold text-tprimary flex items-center gap-1.5">
+      <AppIcon name="gear" :size="15" class="text-accent" /> 模型配置
+    </h2>
     <p class="text-xs text-tsecondary -mt-2">配置多个模型，每次仅激活一个用于 AI 分析</p>
 
     <!-- 模型列表 -->
@@ -8,52 +10,59 @@
       <div
         v-for="model in models"
         :key="model.id"
-        class="border rounded-lg p-3"
-        :class="model.id === activeModelId ? 'border-accent bg-accent-soft' : 'border-edge'"
+        class="relative border rounded-lg overflow-hidden transition-all duration-200"
+        :class="model.id === activeModelId ? 'border-accent/60 bg-accent-soft/30 shadow-card' : 'border-edge bg-base-panel hover:border-edge-strong'"
       >
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 min-w-0">
-            <span
-              class="w-3 h-3 rounded-full shrink-0"
-              :class="model.id === activeModelId ? 'bg-success' : 'bg-edge'"
-            />
-            <span class="text-xs font-medium text-tprimary truncate">{{ model.name || '未命名模型' }}</span>
-            <span
-              v-if="model.id === activeModelId"
-              class="text-[10px] px-1.5 py-0.5 bg-success-soft text-success rounded shrink-0"
-            >
-              当前激活
-            </span>
+        <!-- 激活态左侧色条 -->
+        <span
+          v-if="model.id === activeModelId"
+          class="absolute left-0 top-0 bottom-0 w-0.5 bg-accent"
+        />
+        <div class="p-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 min-w-0">
+              <span
+                class="w-2.5 h-2.5 rounded-full shrink-0"
+                :class="model.id === activeModelId ? 'bg-success shadow-sm shadow-success/50' : 'bg-edge'"
+              />
+              <span class="text-xs font-medium text-tprimary truncate">{{ model.name || '未命名模型' }}</span>
+              <span
+                v-if="model.id === activeModelId"
+                class="text-[10px] px-1.5 py-0.5 bg-success-soft text-success rounded shrink-0 font-medium"
+              >
+                当前激活
+              </span>
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <button
+                v-if="model.id !== activeModelId"
+                class="text-[10px] px-2 py-1 bg-accent text-white rounded hover:bg-accent-hover transition-colors"
+                @click="activateModel(model.id)"
+              >
+                激活
+              </button>
+              <button
+                class="text-[10px] px-2 py-1 bg-base-hover text-tsecondary rounded hover:bg-base-active transition-colors"
+                @click="startEdit(model)"
+              >
+                编辑
+              </button>
+              <button
+                class="text-[10px] px-2 py-1 bg-danger-soft text-danger rounded hover:bg-danger/20 transition-colors"
+                @click="removeModel(model.id)"
+              >
+                删除
+              </button>
+            </div>
           </div>
-          <div class="flex gap-1 shrink-0">
-            <button
-              v-if="model.id !== activeModelId"
-              class="text-[10px] px-2 py-1 bg-success text-white rounded hover:bg-success/80"
-              @click="activateModel(model.id)"
-            >
-              激活
-            </button>
-            <button
-              class="text-[10px] px-2 py-1 bg-base-hover text-tsecondary rounded hover:bg-base-active"
-              @click="startEdit(model)"
-            >
-              编辑
-            </button>
-            <button
-              class="text-[10px] px-2 py-1 bg-danger-soft text-danger rounded hover:bg-danger-soft"
-              @click="removeModel(model.id)"
-            >
-              删除
-            </button>
+          <div class="text-[10px] text-tdisabled mt-1.5 truncate">
+            {{ model.model }} · {{ model.baseUrl }}{{ model.apiPath }}
           </div>
-        </div>
-        <div class="text-[10px] text-tdisabled mt-1 truncate">
-          {{ model.model }} · {{ model.baseUrl }}{{ model.apiPath }}
         </div>
       </div>
 
       <button
-        class="w-full py-2.5 border border-dashed border-edge rounded-lg text-xs text-tsecondary hover:border-accent hover:text-accent transition-colors flex items-center justify-center gap-1.5"
+        class="w-full py-2.5 border border-dashed border-edge rounded-lg text-xs text-tsecondary hover:border-accent hover:text-accent hover:bg-accent-soft/30 transition-all flex items-center justify-center gap-1.5"
         @click="startAdd"
       >
         <AppIcon name="plus" :size="13" /> 添加模型
@@ -61,98 +70,104 @@
     </div>
 
     <!-- 模型编辑表单 -->
-    <div v-if="editing" class="border border-accent rounded-lg p-3 space-y-3 bg-base-panel">
-      <h3 class="text-xs font-bold text-tprimary">{{ editing.id ? '编辑模型' : '添加模型' }}</h3>
-      <div>
-        <label class="text-xs text-tsecondary block mb-1">模型名称（自定义）</label>
-        <input
-          v-model="editing.name"
-          class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50"
-          placeholder="如：OpenAI GPT / DeepSeek"
-        />
+    <div v-if="editing" class="border border-accent/60 rounded-lg overflow-hidden bg-surface-raised shadow-card">
+      <div class="px-3 py-2 bg-base-hover border-b border-edge">
+        <h3 class="text-xs font-bold text-tprimary">{{ editing.id ? '编辑模型' : '添加模型' }}</h3>
       </div>
-      <div>
-        <label class="text-xs text-tsecondary block mb-1">API 密钥</label>
-        <input
-          v-model="editing.apiKey"
-          type="password"
-          class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50"
-          placeholder="sk-..."
-        />
-      </div>
-      <div>
-        <label class="text-xs text-tsecondary block mb-1">接口地址（Base URL）</label>
-        <input
-          v-model="editing.baseUrl"
-          class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50"
-          placeholder="https://api.openai.com/v1"
-        />
-      </div>
-      <div>
-        <label class="text-xs text-tsecondary block mb-1">API 格式</label>
-        <select
-          v-model="editing.apiPath"
-          class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-base-panel"
-        >
-          <option v-for="p in apiPathPresets" :key="p.path" :value="p.path">
-            {{ p.label }} ({{ p.path }})
-          </option>
-        </select>
-        <div class="text-[10px] text-tdisabled mt-1">
-          完整请求地址: <code class="bg-base-panel px-1 rounded">{{ editFullUrl }}</code>
+      <div class="p-3 space-y-3">
+        <div>
+          <label class="text-xs text-tsecondary block mb-1">模型名称（自定义）</label>
+          <input
+            v-model="editing.name"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-surface-sunken"
+            placeholder="如：OpenAI GPT / DeepSeek"
+          />
         </div>
-      </div>
-      <div>
-        <label class="text-xs text-tsecondary block mb-1">模型名称</label>
-        <input
-          v-model="editing.model"
-          class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50"
-          placeholder="gpt-4o-mini"
-        />
-      </div>
-<div class="flex gap-2 pt-3 border-t border-edge">
-        <button
-          class="flex-1 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover flex items-center justify-center gap-1.5"
-          @click="saveModel"
+        <div>
+          <label class="text-xs text-tsecondary block mb-1">API 密钥</label>
+          <input
+            v-model="editing.apiKey"
+            type="password"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-surface-sunken"
+            placeholder="sk-..."
+          />
+        </div>
+        <div>
+          <label class="text-xs text-tsecondary block mb-1">接口地址（Base URL）</label>
+          <input
+            v-model="editing.baseUrl"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-surface-sunken"
+            placeholder="https://api.openai.com/v1"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-tsecondary block mb-1">API 格式</label>
+          <select
+            v-model="editing.apiPath"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-surface-sunken"
+          >
+            <option v-for="p in apiPathPresets" :key="p.path" :value="p.path">
+              {{ p.label }} ({{ p.path }})
+            </option>
+          </select>
+          <div class="text-[10px] text-tdisabled mt-1">
+            完整请求地址: <code class="bg-base-panel px-1 rounded">{{ editFullUrl }}</code>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-tsecondary block mb-1">模型名称</label>
+          <input
+            v-model="editing.model"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-surface-sunken"
+            placeholder="gpt-4o-mini"
+          />
+        </div>
+        <div class="flex gap-2 pt-3 border-t border-edge">
+          <button
+            class="flex-1 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors flex items-center justify-center gap-1.5 shadow-card"
+            @click="saveModel"
+          >
+            <AppIcon name="check" :size="14" /> 保存模型
+          </button>
+          <button
+            class="flex-1 py-2 bg-success text-base rounded-lg text-sm hover:bg-success/80 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 shadow-card"
+            :disabled="!canTest"
+            @click="handleTest"
+          >
+            {{ testing ? '测试中...' : '测试连接' }}
+          </button>
+          <button
+            class="px-3 py-2 bg-base-hover text-tsecondary rounded-lg text-sm hover:bg-base-active transition-colors"
+            @click="cancelEdit"
+          >
+            取消
+          </button>
+        </div>
+        <div
+          v-if="testResult"
+          class="text-xs rounded-lg p-3"
+          :class="testResult.ok ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'"
         >
-          <AppIcon name="check" :size="14" /> 保存模型
-        </button>
-        <button
-          class="flex-1 py-2 bg-success text-base rounded-lg text-sm hover:bg-success/80 disabled:opacity-40 flex items-center justify-center gap-1.5"
-          :disabled="!canTest"
-          @click="handleTest"
-        >
-          {{ testing ? '测试中...' : '测试连接' }}
-        </button>
-        <button
-          class="px-3 py-2 bg-base-hover text-tsecondary rounded-lg text-sm hover:bg-base-active"
-          @click="cancelEdit"
-        >
-          取消
-        </button>
-      </div>
-      <div
-        v-if="testResult"
-        class="text-xs rounded-lg p-3"
-        :class="testResult.ok ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'"
-      >
-        {{ testResult.msg }}
+          {{ testResult.msg }}
+        </div>
       </div>
     </div>
 
     <hr class="border-edge" />
 
-    <h2 class="text-sm font-bold text-tprimary">数据备份</h2>
+    <h2 class="text-sm font-bold text-tprimary flex items-center gap-1.5">
+      <AppIcon name="export" :size="15" class="text-accent" /> 数据备份
+    </h2>
     <p class="text-xs text-tsecondary mb-2">导出配置和所有站点数据，重装后一键恢复</p>
     <div class="flex gap-2">
       <button
-        class="flex-1 py-2 bg-base-active text-white rounded-lg text-sm hover:bg-edge-strong transition-colors flex items-center justify-center gap-1.5"
+        class="flex-1 py-2 bg-surface-raised text-tprimary rounded-lg text-sm hover:bg-base-hover transition-colors flex items-center justify-center gap-1.5 border border-edge shadow-card"
         @click="handleExport"
       >
         <AppIcon name="export" :size="13" /> 导出配置
       </button>
       <button
-        class="flex-1 py-2 bg-base-active text-white rounded-lg text-sm hover:bg-edge-strong transition-colors flex items-center justify-center gap-1.5"
+        class="flex-1 py-2 bg-surface-raised text-tprimary rounded-lg text-sm hover:bg-base-hover transition-colors flex items-center justify-center gap-1.5 border border-edge shadow-card"
         @click="triggerImport"
       >
         <AppIcon name="plus" :size="13" /> 导入配置

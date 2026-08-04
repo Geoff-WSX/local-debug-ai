@@ -1,13 +1,13 @@
 <template>
   <div class="p-4 space-y-4">
-    <div class="text-sm font-medium text-tprimary mb-2">
-      项目简介
-      <span class="text-xs text-tdisabled font-normal ml-1">（填写项目概况，AI 将结合业务背景分析交互）</span>
+    <div class="text-sm font-bold text-tprimary flex items-center gap-1.5">
+      <AppIcon name="doc" :size="15" class="text-accent" /> 项目简介
+      <span class="text-xs text-tdisabled font-normal">（填写项目概况，AI 将结合业务背景分析交互）</span>
     </div>
 
     <!-- 文件上传区 -->
     <div
-      class="border border-dashed border-edge rounded-lg p-6 text-center cursor-pointer hover:border-accent transition-colors group"
+      class="border-2 border-dashed border-edge rounded-lg p-6 text-center cursor-pointer hover:border-accent hover:bg-accent-soft/30 transition-all duration-200 group"
       @click="triggerUpload"
       @dragover.prevent
       @drop.prevent="handleDrop"
@@ -19,45 +19,54 @@
         class="hidden"
         @change="handleFileSelect"
       />
-      <p class="text-sm text-tsecondary flex items-center justify-center gap-2">
-        <AppIcon name="doc" :size="16" class="text-tdisabled group-hover:text-accent transition-colors" />
-        点击或拖拽上传 .txt / .md 项目描述
-      </p>
+      <div class="w-10 h-10 rounded-full bg-base-hover flex items-center justify-center mx-auto mb-2 group-hover:bg-accent-soft transition-colors">
+        <AppIcon name="doc" :size="20" class="text-tdisabled group-hover:text-accent transition-colors" />
+      </div>
+      <p class="text-sm text-tsecondary">点击或拖拽上传 .txt / .md 项目描述</p>
     </div>
 
     <!-- 文本编辑区 -->
-    <textarea
-      v-model="content"
-      class="w-full h-48 p-3 border border-edge rounded-lg text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 bg-base-panel text-tprimary placeholder:text-tdisabled"
-      placeholder="在此填写项目简介：这个产品是做什么的、核心功能、关键交互流程…"
-    />
+    <div class="space-y-1">
+      <label class="text-xs text-tsecondary font-medium">项目描述（手写）</label>
+      <textarea
+        v-model="content"
+        class="w-full h-44 p-3 border border-edge rounded-lg text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 bg-surface-sunken text-tprimary placeholder:text-tdisabled"
+        placeholder="在此填写项目简介：这个产品是做什么的、核心功能、关键交互流程…"
+      />
+    </div>
 
     <!-- 操作按钮 -->
     <div class="flex gap-2">
       <button
-        class="flex-1 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+        class="flex-1 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-card"
         :disabled="!content.trim()"
         @click="handleSave"
       >
         <AppIcon name="check" :size="14" /> 保存简介
       </button>
       <button
-        class="px-4 py-2 bg-base-hover text-tsecondary rounded-lg text-sm hover:bg-base-active transition-colors"
+        class="px-4 py-2 bg-base-hover text-tsecondary rounded-lg text-sm hover:bg-base-active transition-colors flex items-center gap-1.5"
         @click="handleClear"
       >
-        清空
+        <AppIcon name="trash" :size="13" /> 清空
       </button>
     </div>
 
     <!-- 当前内容预览 -->
-    <div v-if="store.originSession.projectContext" class="mt-2">
-      <div class="text-xs text-tsecondary mb-1">已保存的项目简介（{{ store.originSession.projectContext.length }} 字符）</div>
-      <div class="text-xs text-tsecondary bg-base-hover rounded p-2 max-h-32 overflow-y-auto">
+    <div v-if="store.originSession.projectContext" class="rounded-lg border border-edge overflow-hidden">
+      <div class="flex items-center justify-between px-3 py-2 bg-surface-raised border-b border-edge">
+        <span class="text-xs text-tsecondary flex items-center gap-1.5">
+          <AppIcon name="doc" :size="12" class="text-success" />
+          已保存的项目简介（{{ store.originSession.projectContext.length }} 字符）
+        </span>
+      </div>
+      <div class="text-xs text-tsecondary bg-surface-sunken p-3 max-h-32 overflow-y-auto">
         {{ store.originSession.projectContext.slice(0, 500) }}{{ store.originSession.projectContext.length > 500 ? '...' : '' }}
       </div>
     </div>
-    <div v-else class="text-xs text-warning mt-2">
-      ⚠ 尚未填写项目简介，AI 分析将仅基于代码日志排查异常
+    <div v-else class="text-xs text-warning bg-warning-soft rounded-lg p-2.5 border border-warning/20 flex items-center gap-1.5">
+      <AppIcon name="doc" :size="13" class="text-warning" />
+      尚未填写项目简介，AI 分析将仅基于代码日志排查异常
     </div>
   </div>
 </template>

@@ -1,20 +1,20 @@
 <template>
   <div class="flex flex-col h-full">
     <!-- 顶部操作栏 -->
-    <div class="flex items-center justify-between px-3 py-2 border-b bg-base-panel">
+    <div class="flex items-center justify-between px-3 py-2 border-b border-edge bg-base-panel">
       <span class="text-xs text-tsecondary">
         共 {{ store.originSession.analysisHistory.length }} 条记录
       </span>
-      <div class="flex gap-3">
+      <div class="flex gap-2">
         <button
-          class="text-xs text-tsecondary hover:text-accent transition-colors flex items-center gap-1"
+          class="text-xs text-tsecondary hover:text-accent transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-base-hover"
           :disabled="store.originSession.analysisHistory.length === 0"
           @click="handleExport"
         >
           <AppIcon name="export" :size="13" /> 导出
         </button>
         <button
-          class="text-xs text-danger hover:text-danger/80 transition-colors flex items-center gap-1"
+          class="text-xs text-danger hover:text-danger/80 transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-danger-soft"
           :disabled="store.originSession.analysisHistory.length === 0"
           @click="handleClearAll"
         >
@@ -35,24 +35,24 @@
       <div
         v-for="(record, idx) in sortedHistory"
         :key="record.timestamp"
-        class="border-b border-edge"
+        class="border-b border-edge-faint"
       >
         <!-- 摘要行（点击展开） -->
         <div
-          class="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-base-panel transition-colors"
+          class="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-base-hover/70 transition-colors group"
           @click="toggleExpand(record.timestamp)"
         >
-          <span class="text-tdisabled shrink-0 transition-transform duration-200" :class="expanded.has(record.timestamp) ? 'rotate-180' : ''">
+          <span class="text-tdisabled shrink-0 transition-all duration-200" :class="expanded.has(record.timestamp) ? 'rotate-180 text-accent' : 'group-hover:text-tsecondary'">
             <AppIcon name="chevron" :size="12" />
           </span>
           <span class="text-xs text-tsecondary shrink-0">{{ formatTimestamp(record.timestamp) }}</span>
           <span
             v-if="!record.result"
-            class="text-[10px] px-1.5 py-0.5 bg-warning-soft text-warning rounded shrink-0"
+            class="text-[10px] px-1.5 py-0.5 bg-warning-soft text-warning rounded shrink-0 font-medium"
           >
             未分析
           </span>
-          <span class="text-xs text-tdisabled truncate flex-1">
+          <span class="text-xs text-tdisabled truncate flex-1 ml-1">
             {{ record.records.length }} 条操作记录
           </span>
           <button
@@ -60,18 +60,18 @@
             class="text-[10px] px-2 py-1 bg-accent text-white rounded shrink-0 animate-pulse flex items-center gap-1"
             @click.stop
           >
-            <AppIcon name="close" :size="10" /> 分析中...
+            <AppIcon name="loader" :size="10" class="animate-spin" /> 分析中...
           </button>
           <button
             v-else
-            class="text-[10px] px-2 py-1 bg-accent text-white rounded hover:bg-accent-hover shrink-0 flex items-center gap-1"
+            class="text-[10px] px-2 py-1 bg-accent text-white rounded hover:bg-accent-hover shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
             :disabled="!record.records.length"
             @click.stop="handleAnalyze(record.timestamp)"
           >
             <AppIcon name="analyze" :size="10" /> 分析
           </button>
           <button
-            class="text-tdisabled hover:text-danger transition-colors shrink-0"
+            class="text-tdisabled hover:text-danger transition-colors shrink-0 p-1 rounded hover:bg-danger-soft"
             @click.stop="handleDelete(record.timestamp)"
           >
             <AppIcon name="close" :size="12" />
@@ -80,20 +80,20 @@
 
         <!-- 展开详情（带过渡动画） -->
         <Transition name="expand">
-          <div v-if="expanded.has(record.timestamp)" class="px-4 pb-3 space-y-2 overflow-hidden">
-            <div class="text-xs text-tsecondary font-medium flex items-center gap-1"><AppIcon name="list" :size="12" /> 操作日志</div>
-            <div class="bg-base-panel rounded p-2 max-h-32 overflow-y-auto text-xs text-tsecondary space-y-1">
+          <div v-if="expanded.has(record.timestamp)" class="px-4 pb-3 space-y-2 overflow-hidden bg-surface-sunken/30">
+            <div class="text-xs text-tsecondary font-medium flex items-center gap-1 pt-1"><AppIcon name="list" :size="12" class="text-accent" /> 操作日志</div>
+            <div class="bg-base-panel rounded-lg p-2.5 max-h-32 overflow-y-auto text-xs text-tsecondary space-y-1 border border-edge shadow-card">
               <div v-for="(op, i) in record.records" :key="i" class="truncate">
-                <span class="text-tdisabled">[{{ op.type }}]</span>
+                <span class="text-tdisabled font-mono text-[10px]">[{{ op.type }}]</span>
                 {{ op.targetText || op.errorMsg || op.toUrl || '(无详情)' }}
               </div>
               <div v-if="record.records.length === 0" class="text-tdisabled">无操作记录</div>
             </div>
-            <div class="text-xs text-tsecondary font-medium flex items-center gap-1"><AppIcon name="analyze" :size="12" /> AI 诊断结果</div>
-            <div v-if="record.result" class="max-h-48 overflow-y-auto">
+            <div class="text-xs text-tsecondary font-medium flex items-center gap-1"><AppIcon name="analyze" :size="12" class="text-accent" /> AI 诊断结果</div>
+            <div v-if="record.result" class="max-h-48 overflow-y-auto bg-surface-raised rounded-lg p-2.5 border border-edge shadow-card">
               <MarkdownRenderer :content="record.result" />
             </div>
-            <div v-else class="text-xs text-warning bg-warning-soft rounded p-2">
+            <div v-else class="text-xs text-warning bg-warning-soft rounded-lg p-2.5 border border-warning/20">
               尚未分析 — 点击右侧「分析」按钮即可分析
             </div>
           </div>

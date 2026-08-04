@@ -15,9 +15,16 @@ export default {
           hover: '#2d2d30',
           active: '#37373d',
         },
+        // 面层级：底 → 面板 → 卡片 → 浮层，形成立体纵深感
+        surface: {
+          raised: '#2b2b2f',      // 卡片底（比 panel 亮一档）
+          overlay: '#2f2f34',     // 浮层/对话框底
+          sunken: '#1a1a1c',      // 凹陷区底（输入/代码区）
+        },
         edge: {
           DEFAULT: '#3e3e42',
           strong: '#4a4a4f',
+          faint: 'rgba(62, 62, 66, 0.6)',
         },
         tprimary: '#e8e8e8',
         tsecondary: '#9d9d9d',
@@ -60,9 +67,10 @@ export default {
         'slide-in-right': 'slide-in-right 0.3s ease-out',
       },
       boxShadow: {
-        'card': '0 2px 8px rgba(0, 0, 0, 0.35)',
-        'card-hover': '0 4px 16px rgba(0, 0, 0, 0.45)',
+        'card': '0 1px 0 rgba(255,255,255,0.03) inset, 0 2px 8px rgba(0, 0, 0, 0.35)',
+        'card-hover': '0 2px 4px rgba(255,255,255,0.04) inset, 0 4px 16px rgba(0, 0, 0, 0.45)',
         'pop': '0 8px 24px rgba(0, 0, 0, 0.5)',
+        'edge-top': '0 -1px 0 rgba(255,255,255,0.04) inset',
       },
     },
   },

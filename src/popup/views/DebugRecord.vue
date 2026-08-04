@@ -7,21 +7,21 @@
     />
 
     <!-- 控制按钮 -->
-    <div class="flex items-center gap-3 px-3 py-2.5 border-b border-edge bg-base-panel">
+    <div class="flex items-center gap-2.5 px-3 py-2.5 border-b border-edge bg-base-panel">
       <button
-        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
+        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-card"
         :class="store.isRecording
-          ? 'bg-danger text-white hover:bg-danger/80 animate-pulse-rec'
+          ? 'bg-danger/15 text-danger border border-danger/40 hover:bg-danger/20'
           : 'bg-accent text-white hover:bg-accent-hover'"
         @click="toggleRecording"
       >
-        <AppIcon :name="store.isRecording ? 'stop' : 'record'" :size="14" />
+        <AppIcon :name="store.isRecording ? 'stop' : 'record'" :size="14" :class="store.isRecording ? 'animate-pulse-rec' : ''" />
         {{ store.isRecording ? '停止录制' : '开始录制' }}
       </button>
 
       <button
-        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
-        :class="store.isAnalyzing ? 'bg-base-active text-tsecondary' : 'bg-success text-base hover:bg-success/80'"
+        class="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
+        :class="store.isAnalyzing ? 'bg-base-active text-tsecondary' : 'bg-success text-base shadow-card hover:bg-success/80'"
         :disabled="store.liveRecords.length === 0 || store.isAnalyzing"
         @click="handleAnalyze"
       >
@@ -37,14 +37,15 @@
     </div>
 
     <!-- 预期效果输入 -->
-    <div v-if="store.liveRecords.length > 0" class="px-3 py-2 border-b border-edge bg-accent-soft">
-      <label class="text-xs font-medium text-accent flex items-center gap-1.5 mb-1">
+    <div v-if="store.liveRecords.length > 0" class="mx-3 mt-2 mb-2 px-3 py-2.5 border border-accent/30 bg-accent-soft/60 rounded-lg">
+      <label class="text-xs font-medium text-accent flex items-center gap-1.5 mb-1.5">
         <AppIcon name="target" :size="13" />
         预期效果（可选）
+        <span class="text-[10px] text-tsecondary font-normal">AI 将对照此目标定位问题</span>
       </label>
       <input
         v-model="store.expectedEffect"
-        class="w-full px-2.5 py-1.5 border border-edge rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-base-panel text-tprimary placeholder:text-tdisabled"
+        class="w-full px-2.5 py-1.5 border border-edge rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 bg-surface-sunken text-tprimary placeholder:text-tdisabled"
         placeholder="如：点击登录后应该跳转到仪表盘"
       />
     </div>
@@ -75,13 +76,13 @@
     <!-- 结果区域 -->
     <Transition name="result">
       <div v-if="analysisResult !== null" class="border-t border-edge max-h-[260px] overflow-y-auto bg-base-panel">
-        <div class="flex items-center justify-between px-3 py-2 bg-base-hover border-b border-edge sticky top-0">
+        <div class="flex items-center justify-between px-3 py-2 bg-surface-raised border-b border-edge sticky top-0">
           <span class="text-xs font-medium text-accent flex items-center gap-1.5">
             <AppIcon name="analyze" :size="13" />
             AI 分析结果
           </span>
           <button
-            class="text-xs text-tsecondary hover:text-tprimary transition-colors flex items-center gap-1"
+            class="text-xs text-tsecondary hover:text-tprimary transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-base-hover"
             @click="analysisResult = null"
           >
             <AppIcon name="close" :size="12" /> 收起

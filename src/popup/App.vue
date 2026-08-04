@@ -1,37 +1,39 @@
 <template>
   <div class="w-full h-full min-h-screen flex flex-col bg-base text-tprimary overflow-hidden">
     <!-- 品牌栏 -->
-    <div class="flex items-center gap-2 px-3 py-2.5 bg-base-panel border-b border-edge shrink-0">
-      <img src="/icons/icon48.png" alt="logo" class="w-5 h-5 rounded" />
-      <span class="text-xs font-semibold tracking-wide">LocalDebugAI</span>
+    <div class="flex items-center gap-2.5 px-3 py-2.5 bg-base-panel border-b border-edge-faint shadow-edge-top shrink-0">
+      <div class="flex items-center justify-center w-6 h-6 rounded-md bg-gradient-to-br from-accent to-violet-500/70 shadow-md">
+        <img src="/icons/icon48.png" alt="logo" class="w-4 h-4 rounded-sm" />
+      </div>
+      <span class="text-xs font-bold tracking-wide text-tprimary">LocalDebugAI</span>
       <span
-        class="ml-auto flex items-center gap-1.5 text-[10px]"
-        :class="store.isRecording ? 'text-danger' : 'text-tdisabled'"
+        class="ml-auto inline-flex items-center gap-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+        :class="store.isRecording ? 'bg-danger-soft text-danger' : 'bg-base-hover text-tdisabled'"
       >
         <span
           class="w-1.5 h-1.5 rounded-full"
           :class="store.isRecording ? 'bg-danger animate-pulse-rec' : 'bg-tdisabled'"
         />
-        {{ store.isRecording ? 'REC 录制中' : '待机' }}
+        {{ store.isRecording ? '录制中' : '待机' }}
       </span>
     </div>
 
     <!-- Tab 导航 -->
-    <div class="flex border-b border-edge bg-base-panel shrink-0">
+    <div class="flex gap-1 px-2 py-1.5 bg-base-panel border-b border-edge shrink-0">
       <button
         v-for="(tab, idx) in tabs"
         :key="idx"
-        class="flex-1 py-2.5 text-xs font-medium tracking-wide transition-all duration-200 relative flex items-center justify-center gap-1.5"
+        class="flex-1 py-2 rounded-md text-xs font-medium tracking-wide transition-all duration-200 relative flex items-center justify-center gap-1.5"
         :class="store.activeTab === idx
-          ? 'text-accent bg-base-hover'
+          ? 'text-accent bg-base-hover shadow-card'
           : 'text-tsecondary hover:text-tprimary hover:bg-base-hover/50'"
         @click="store.activeTab = idx"
       >
-        <AppIcon :name="tab.icon" :size="14" />
+        <AppIcon :name="tab.icon" :size="14" :class="store.activeTab === idx ? '' : 'text-tdisabled'" />
         {{ tab.label }}
         <span
           v-if="store.activeTab === idx"
-          class="absolute bottom-0 left-0 right-0 h-0.5 bg-accent transition-all duration-200"
+          class="absolute -bottom-1.5 left-3 right-3 h-0.5 bg-accent rounded-full transition-all duration-200"
         />
       </button>
     </div>
