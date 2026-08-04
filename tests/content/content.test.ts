@@ -56,6 +56,48 @@ describe('content script', () => {
     expect(mockData['localhost:3000']?.currentRecording?.length || 0).toBe(0)
   })
 
+  it('should capture text input on blur when recording', async () => {
+    await import('../../src/content/index')
+
+    mockData.recordingStatuses['localhost:3000'] = 1234567890
+    mockData['localhost:3000'] = {
+      projectContext: '', currentRecording: [], analysisHistory: [],
+    }
+
+    document.body.innerHTML = '<input id="q" value="" />'
+    const input = document.getElementById('q') as HTMLInputElement
+    input.value = 'vue 调试'
+    input.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
+
+    await new Promise(r => setTimeout(r, 50))
+
+    const records = mockData['localhost:3000']?.currentRecording || []
+    const inputRec = records.find((r: any) => r.type === 'input')
+    expect(inputRec).toBeTruthy()
+    expect(inputRec.targetText).toBe('vue 调试')
+  })
+
+  it('should not duplicate input when value unchanged', async () => {
+    await import('../../src/content/index')
+
+    mockData.recordingStatuses['localhost:3000'] = 1234567890
+    mockData['localhost:3000'] = {
+      projectContext: '', currentRecording: [], analysisHistory: [],
+    }
+
+    document.body.innerHTML = '<input id="q" value="abc" />'
+    const input = document.getElementById('q') as HTMLInputElement
+    // 值未变化：Enter 后再 blur 不应重复记录
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    input.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
+
+    await new Promise(r => setTimeout(r, 50))
+
+    const records = mockData['localhost:3000']?.currentRecording || []
+    const inputRecs = records.filter((r: any) => r.type === 'input')
+    expect(inputRecs.length).toBeLessThanOrEqual(1)
+  })
+
   it('should clear stale records on page load but keep new recordings', async () => {
     // 模拟上一轮录制残留（时间戳早于页面加载）
     mockData.recordingStatuses['localhost:3000'] = 1234567890

@@ -125,31 +125,93 @@ function handleRouteChange(toUrl: string) {
   })()
 }
 
-document.addEventListener('click', handleClick, { capture: true })
-window.addEventListener('error', handleError)
-window.addEventListener('unhandledrejection', handleRejection)
-
-history.pushState = function (data, unused, url) {
-  const toUrl = url ? new URL(url, location.origin).href : location.href
-  originalPushState.call(this, data, unused, url)
-  handleRouteChange(toUrl)
-}
-
-history.replaceState = function (data, unused, url) {
-  const toUrl = url ? new URL(url, location.origin).href : location.href
-  originalReplaceState.call(this, data, unused, url)
-  handleRouteChange(toUrl)
-}
-
-window.addEventListener('popstate', () => {
-  const currentUrl = location.href
-  if (currentUrl !== lastUrl) {
-    handleRouteChange(currentUrl)
+// 输入控件取值（input / textarea / contenteditable）
+function readInputValue(el: HTMLElement): string | null {
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    return el.value
   }
-})
+  if (el.isContentEditable) {
+    return el.textContent || ''
+  }
+  return null
+}
 
-// 预热录制状态缓存，使首个事件即可命中真实开关状态
-refreshRecordingStatus()
+// 去重缓存：同一控件同一值只记一条（Enter 触发后 blur 不重复）
+const recordedInputs = new WeakMap<HTMLElement, string>()
+
+function handleInput(el: HTMLElement) {
+  void (async () => {
+    if (!(await guardRecording())) return
+    const value = readInputValue(el)
+    if (value === null) return
+    // 空值或未变化则不记
+    const prev = recordedInputs.get(el)
+    if (!value || value === prev) return
+    recordedInputs.set(el, value)
+    const item: OperationItem = {
+      type: 'input',
+      timestamp: Date.now(),
+      pageUrl: location.href,
+      targetText: value.trim().slice(0, 80) || undefined,
+      xpath: getXPath(el),
+    }
+    await sendRecord(item)
+  })()
+}
+
+// 捕获输入：失焦(blur) 记最终值
+function bindInputListeners() {
+  document.addEventListener('blur', (e) => {
+    const el = e.target as HTMLElement | null
+    if (el && readInputValue(el) !== null) handleInput(el)
+  }, true)
+
+  // 捕获输入：按回车提交时记值
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return
+    const el = e.target as HTMLElement | null
+    if (el && readInputValue(el) !== null) handleInput(el)
+  }, true)
+}
+
+function main() {
+  bindInputListeners()
+
+  document.addEventListener('click', handleClick, { capture: true })
+  window.addEventListener('error', handleError)
+  window.addEventListener('unhandledrejection', handleRejection)
+
+  history.pushState = function (data, unused, url) {
+    const toUrl = url ? new URL(url, location.origin).href : location.href
+    originalPushState.call(this, data, unused, url)
+    handleRouteChange(toUrl)
+  }
+
+  history.replaceState = function (data, unused, url) {
+    const toUrl = url ? new URL(url, location.origin).href : location.href
+    originalReplaceState.call(this, data, unused, url)
+    handleRouteChange(toUrl)
+  }
+
+  window.addEventListener('popstate', () => {
+    const currentUrl = location.href
+    if (currentUrl !== lastUrl) {
+      handleRouteChange(currentUrl)
+    }
+  })
+
+  // 预热录制状态缓存，使首个事件即可命中真实开关状态
+  refreshRecordingStatus()
+}
+
+// 同一 document 只绑定一次（防止脚本重复注入 / 测试中模块重载导致监听器堆积）
+declare global {
+  interface Window { __UDA_bound?: boolean }
+}
+if (!window.__UDA_bound) {
+  window.__UDA_bound = true
+  main()
+}
 
 // 页面加载完成：仅清空上次未分析的录制记录
 // 保护：只在页面刚加载时清空一次；若记录时间晚于本页加载时间（新录制），则不删除

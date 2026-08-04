@@ -25,10 +25,10 @@ export const API_PATH_PRESETS = [
 
 // ===== 单条操作日志 =====
 export interface OperationItem {
-  type: 'click' | 'js_error' | 'route_change'
+  type: 'click' | 'js_error' | 'route_change' | 'input'
   timestamp: number
   pageUrl: string
-  // 点击事件专属
+  // 点击/输入事件专属
   targetText?: string
   xpath?: string
   // JS 报错专属

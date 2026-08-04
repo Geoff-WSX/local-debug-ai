@@ -42,6 +42,19 @@ describe('LogItem.vue', () => {
     expect(wrapper.text()).toContain('/new-page')
   })
 
+  it('should render input event correctly', () => {
+    const item: OperationItem = {
+      type: 'input',
+      timestamp: Date.now(),
+      pageUrl: '/search',
+      targetText: 'hello',
+      xpath: '//input',
+    }
+    const wrapper = mount(LogItem, { props: { item, index: 0 } })
+    expect(wrapper.text()).toContain('输入')
+    expect(wrapper.text()).toContain('hello')
+  })
+
   it('should emit remove event when delete button clicked', () => {
     const item: OperationItem = {
       type: 'click',

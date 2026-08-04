@@ -56,6 +56,7 @@ const typeClass = computed(() => {
     case 'click': return 'bg-accent-soft text-accent'
     case 'js_error': return 'bg-danger-soft text-danger'
     case 'route_change': return 'bg-success-soft text-success'
+    case 'input': return 'bg-warning-soft text-warning'
   }
 })
 
@@ -65,6 +66,7 @@ const accentBarClass = computed(() => {
     case 'click': return 'bg-accent/80 group-hover:bg-accent'
     case 'js_error': return 'bg-danger/80 group-hover:bg-danger'
     case 'route_change': return 'bg-success/80 group-hover:bg-success'
+    case 'input': return 'bg-warning/80 group-hover:bg-warning'
   }
 })
 
@@ -73,6 +75,7 @@ const typeIcon = computed(() => {
     case 'click': return 'mic'
     case 'js_error': return 'close'
     case 'route_change': return 'chevron'
+    case 'input': return 'target'
   }
 })
 
@@ -81,6 +84,7 @@ const typeLabel = computed(() => {
     case 'click': return `点击 — ${truncateText(props.item.targetText || '(无文本)', 30)}`
     case 'js_error': return `JS 错误 — ${truncateText(props.item.errorMsg || '', 40)}`
     case 'route_change': return `路由跳转 → ${truncateText(props.item.toUrl || '', 30)}`
+    case 'input': return `输入 — ${truncateText(props.item.targetText || '(空)', 30)}`
   }
 })
 
@@ -89,6 +93,7 @@ const summary = computed(() => {
     case 'click': return `XPath: ${truncateText(props.item.xpath || '', 40)}`
     case 'js_error': return truncateText(props.item.errorMsg || '', 60)
     case 'route_change': return `${truncateText(props.item.fromUrl || '', 25)} → ${truncateText(props.item.toUrl || '', 25)}`
+    case 'input': return `XPath: ${truncateText(props.item.xpath || '', 40)}`
   }
 })
 
