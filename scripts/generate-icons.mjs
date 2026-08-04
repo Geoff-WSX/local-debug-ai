@@ -1,5 +1,5 @@
 /**
- * 生成 LocalDebugAI 插件 Logo（纯 Node，无第三方依赖）
+ * 生成 UDA 插件 Logo（纯 Node，无第三方依赖）
  * 设计：蓝色渐变圆角背景 + 白色「LD」字母 + 红色录制圆点
  * 输出：public/icons/icon{16,48,128}.png
  */

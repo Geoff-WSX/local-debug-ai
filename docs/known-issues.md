@@ -15,9 +15,10 @@ Chrome Side Panel API 的设计是侧边栏生命周期独立于标签页，切�
 | `chrome.sidePanel.setOptions({ tabId, enabled: false })` | **不可用** — 该 API 持久化到 Chrome 内部存储，一旦禁用某个 Tab，即使用户移除重装插件也无法恢复 |
 | 手动跟踪 `panelTabId` + `action.onClicked` | 逻辑过于复杂且不稳定 |
 
-**影响：**
-- 在 localhost 打开侧边栏后，切换到其他页面侧边栏仍然可见
-- 仅影响使用体验，不影响功能（录制、AI 分析等正常工作）
+**影响（已部分解决）：**
+- V1.0：在 localhost 打开侧边栏后，切换到其他页面侧边栏仍然可见
+- V1.1（UDA）：放开所有站点支持，切 Tab 侧边栏保持打开，显示对应站点的数据（不再是 bug，而是设计行为）
+- 不影响功能（录制、AI 分析等正常工作）
 
 **可能的长期方向：**
 - 等待 Chrome 官方在 Side Panel API 中提供"仅当前 Tab 显示"的原生选项

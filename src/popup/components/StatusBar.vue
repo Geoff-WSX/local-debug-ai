@@ -4,7 +4,6 @@
       {{ displayOrigin }}
     </span>
     <div
-      v-if="isLocalhost"
       class="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium"
       :class="hasProjectContext
         ? 'bg-success-soft text-success'
@@ -16,9 +15,6 @@
       />
       {{ hasProjectContext ? '已填写项目简介' : '未填写项目简介' }}
     </div>
-    <div v-else class="text-[10px] text-warning bg-warning-soft px-2 py-0.5 rounded-full">
-      ⚠ 仅支持 localhost
-    </div>
   </div>
 </template>
 
@@ -29,10 +25,6 @@ const props = defineProps<{
   origin: string
   hasProjectContext: boolean
 }>()
-
-const isLocalhost = computed(() => {
-  return props.origin.startsWith('localhost') || props.origin.startsWith('127.0.0.1')
-})
 
 const displayOrigin = computed(() => {
   return props.origin || '未检测到页面'

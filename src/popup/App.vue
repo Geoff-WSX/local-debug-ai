@@ -5,7 +5,7 @@
       <div class="flex items-center justify-center w-6 h-6 rounded-md bg-gradient-to-br from-accent to-violet-500/70 shadow-md">
         <img src="/icons/icon48.png" alt="logo" class="w-4 h-4 rounded-sm" />
       </div>
-      <span class="text-xs font-bold tracking-wide text-tprimary">LocalDebugAI</span>
+      <span class="text-xs font-bold tracking-wide text-tprimary">UDA</span>
       <span
         class="ml-auto inline-flex items-center gap-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
         :class="store.isRecording ? 'bg-danger-soft text-danger' : 'bg-base-hover text-tdisabled'"

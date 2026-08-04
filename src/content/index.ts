@@ -10,6 +10,31 @@ const originalReplaceState = history.replaceState
 // 串行化写入队列，防止并发覆盖
 let writeQueue: Promise<void> = Promise.resolve()
 
+// 录制状态同步缓存：true=本页正在录制。每次事件触发时刷新，避免常规状态下无谓的 storage 写入
+let isRecordingNow = false
+let statusPending = false
+async function refreshRecordingStatus(): Promise<boolean> {
+  try {
+    statusPending = true
+    const data = await chrome.storage.local.get(RECORDING_KEY)
+    const statuses = (data[RECORDING_KEY] || {}) as Record<string, number>
+    const origin = new URL(location.href).host
+    isRecordingNow = (statuses[origin] || 0) > 0
+  } catch {
+    isRecordingNow = false
+  } finally {
+    statusPending = false
+  }
+  return isRecordingNow
+}
+
+// 事件入口守卫：非录制态直接短路，不产生任何采集副作用（真开关）
+async function guardRecording(): Promise<boolean> {
+  if (isRecordingNow) return true
+  if (statusPending) return false
+  return await refreshRecordingStatus()
+}
+
 /**
  * content script 直接写入 storage（页面内常驻，不依赖 Service Worker）
  */
@@ -36,56 +61,68 @@ async function sendRecord(item: OperationItem) {
         await chrome.storage.local.set({ [origin]: session })
       }
     } catch (e) {
-      console.error('[AI调试助手] 录制存储失败:', e)
+      console.error('[UDA] 录制存储失败:', e)
     }
   })
   await writeQueue
 }
 
 function handleClick(e: MouseEvent) {
-  const target = e.target as HTMLElement | null
-  if (!target) return
-  const item: OperationItem = {
-    type: 'click',
-    timestamp: Date.now(),
-    pageUrl: location.href,
-    targetText: (target.textContent || target.innerText || '').trim().slice(0, 50) || undefined,
-    xpath: getXPath(target),
-  }
-  sendRecord(item)
+  void (async () => {
+    if (!(await guardRecording())) return
+    const target = e.target as HTMLElement | null
+    if (!target) return
+    const item: OperationItem = {
+      type: 'click',
+      timestamp: Date.now(),
+      pageUrl: location.href,
+      targetText: (target.textContent || target.innerText || '').trim().slice(0, 50) || undefined,
+      xpath: getXPath(target),
+    }
+    await sendRecord(item)
+  })()
 }
 
 function handleError(e: ErrorEvent) {
-  const item: OperationItem = {
-    type: 'js_error',
-    timestamp: Date.now(),
-    pageUrl: location.href,
-    errorMsg: `${e.message} (at ${e.filename}:${e.lineno})`,
-  }
-  sendRecord(item)
+  void (async () => {
+    if (!(await guardRecording())) return
+    const item: OperationItem = {
+      type: 'js_error',
+      timestamp: Date.now(),
+      pageUrl: location.href,
+      errorMsg: `${e.message} (at ${e.filename}:${e.lineno})`,
+    }
+    await sendRecord(item)
+  })()
 }
 
 function handleRejection(e: PromiseRejectionEvent) {
-  const item: OperationItem = {
-    type: 'js_error',
-    timestamp: Date.now(),
-    pageUrl: location.href,
-    errorMsg: `Unhandled Promise Rejection: ${e.reason?.message || e.reason || 'Unknown error'}`,
-  }
-  sendRecord(item)
+  void (async () => {
+    if (!(await guardRecording())) return
+    const item: OperationItem = {
+      type: 'js_error',
+      timestamp: Date.now(),
+      pageUrl: location.href,
+      errorMsg: `Unhandled Promise Rejection: ${e.reason?.message || e.reason || 'Unknown error'}`,
+    }
+    await sendRecord(item)
+  })()
 }
 
 function handleRouteChange(toUrl: string) {
-  const fromUrl = lastUrl || location.href
-  lastUrl = toUrl
-  const item: OperationItem = {
-    type: 'route_change',
-    timestamp: Date.now(),
-    pageUrl: toUrl,
-    fromUrl,
-    toUrl,
-  }
-  sendRecord(item)
+  void (async () => {
+    if (!(await guardRecording())) return
+    const fromUrl = lastUrl || location.href
+    lastUrl = toUrl
+    const item: OperationItem = {
+      type: 'route_change',
+      timestamp: Date.now(),
+      pageUrl: toUrl,
+      fromUrl,
+      toUrl,
+    }
+    await sendRecord(item)
+  })()
 }
 
 document.addEventListener('click', handleClick, { capture: true })
@@ -110,6 +147,9 @@ window.addEventListener('popstate', () => {
     handleRouteChange(currentUrl)
   }
 })
+
+// 预热录制状态缓存，使首个事件即可命中真实开关状态
+refreshRecordingStatus()
 
 // 页面加载完成：仅清空上次未分析的录制记录
 // 保护：只在页面刚加载时清空一次；若记录时间晚于本页加载时间（新录制），则不删除

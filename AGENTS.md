@@ -1,4 +1,4 @@
-# LocalDebugAI — 工作区指令
+# UDA — 工作区指令
 
 Chrome Extension (Manifest V3) 本地前端调试插件：侧边栏录制页面操作（点击/JS报错/路由），调用 AI 分析前端问题。Git 仓库：Geoff-WSX/local-debug-ai。
 

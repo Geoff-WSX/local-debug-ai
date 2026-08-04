@@ -118,26 +118,29 @@ chrome.runtime.onMessage.addListener((message: any, sender: chrome.runtime.Messa
 })
 
 // ===== Side Panel 控制 =====
-// 行为设计：点击图标打开侧边栏，切换 Tab 时根据 URL 启用/禁用
+// 行为设计：点击图标打开侧边栏，切换 Tab 时根据 URL 更新数据
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {})
 
 // 侧边栏打开时通知侧边栏加载数据
 chrome.sidePanel.onOpened.addListener(async () => {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
   const tab = tabs[0]
-  if (tab?.url && (tab.url.startsWith('http://localhost') || tab.url.startsWith('http://127.0.0.1'))) {
+  if (tab?.url && isWebUrl(tab.url)) {
     chrome.runtime.sendMessage({ type: 'TAB_CHANGED', origin: extractOrigin(tab.url) }).catch(() => {})
   }
 })
 
-// Tab 切换：非 localhost 尝试关闭；localhost 通知侧边栏更新数据
+// 判断是否为可调试的 http/https 网页
+function isWebUrl(url: string): boolean {
+  return url.startsWith('http://') || url.startsWith('https://')
+}
+
+// Tab 切换：可调网页通知侧边栏更新数据；侧边栏保持打开以显示该站数据
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
     const tab = await chrome.tabs.get(activeInfo.tabId)
-    if (tab.url && (tab.url.startsWith('http://localhost') || tab.url.startsWith('http://127.0.0.1'))) {
-    chrome.runtime.sendMessage({ type: 'TAB_CHANGED', origin: extractOrigin(tab.url) }).catch(() => {})
-  } else {
-    try { await chrome.sidePanel.close({ windowId: activeInfo.windowId }) } catch {}
-  }
+    if (tab.url && isWebUrl(tab.url)) {
+      chrome.runtime.sendMessage({ type: 'TAB_CHANGED', origin: extractOrigin(tab.url) }).catch(() => {})
+    }
   } catch {}
 })

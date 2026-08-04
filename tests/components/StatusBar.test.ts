@@ -8,34 +8,25 @@ describe('StatusBar.vue', () => {
     setActivePinia(createPinia())
   })
 
-  it('should show green status when project context exists', () => {
+  it('should show status for non-localhost origins too', () => {
     const wrapper = mount(StatusBar, {
       props: {
-        origin: 'localhost:5173',
+        origin: 'example.com',
         hasProjectContext: true,
       },
     })
-    expect(wrapper.text()).toContain('localhost:5173')
+    expect(wrapper.text()).toContain('example.com')
     expect(wrapper.text()).toContain('已填写项目简介')
   })
 
-  it('should show yellow warning when no project context', () => {
-    const wrapper = mount(StatusBar, {
-      props: {
-        origin: 'localhost:5173',
-        hasProjectContext: false,
-      },
-    })
-    expect(wrapper.text()).toContain('未填写项目简介')
-  })
-
-  it('should show localhost hint for non-localhost origins', () => {
+  it('should show no-page hint when origin is empty', () => {
     const wrapper = mount(StatusBar, {
       props: {
         origin: '',
         hasProjectContext: false,
       },
     })
-    expect(wrapper.text()).toContain('仅支持')
+    expect(wrapper.text()).toContain('未检测到页面')
+    expect(wrapper.text()).toContain('未填写项目简介')
   })
 })

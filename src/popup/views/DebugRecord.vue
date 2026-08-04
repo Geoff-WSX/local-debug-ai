@@ -138,7 +138,7 @@ onMounted(() => {
   // 加载当前站点数据
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0]
-    if (tab.url && (tab.url.startsWith('http://localhost') || tab.url.startsWith('http://127.0.0.1'))) {
+    if (tab.url && (tab.url.startsWith('http://') || tab.url.startsWith('https://'))) {
       const origin = new URL(tab.url).host
       store.loadOriginData(origin)
     }
