@@ -1,30 +1,31 @@
 # UDA — 工作区指令
 
-Chrome Extension (Manifest V3) 本地前端调试插件：侧边栏录制页面操作（点击/JS报错/路由），调用 AI 分析前端问题。Git 仓库：Geoff-WSX/local-debug-ai。
+Chrome Extension (Manifest V3) 前端调试插件：侧边栏录制页面操作（点击/JS报错/路由/输入），调用 AI 分析前端问题。Git 仓库：Geoff-WSX/local-debug-ai。
 
 ## 目录结构
 
-- `src/popup/` — 侧边栏 Vue 3 页面（4 标签页：调试录制/项目上下文/设置中心/历史记录）
+- `src/popup/` — 侧边栏 Vue 3 页面（4 标签页：调试录制/项目简介/设置中心/历史记录）
 - `src/content/` — 页面注入脚本（事件捕获，**直写 chrome.storage.local**）
 - `src/background/` — Service Worker（仅 AI 分析请求 + 侧边栏控制）
 - `src/stores/` — Pinia store
-- `src/types/` — 全局类型（ModelConfig/OriginSession/ExtensionMessage）
+- `src/types/` — 全局类型（ModelConfig/OriginSession/PageAnalysisInput/ExtensionMessage）
 - `src/utils/` — storage / ai / xpath / formatter 工具
 - `public/icons/` — 插件 Logo PNG
 - `tests/` — Vitest 单元测试（与 src 结构对应）
 - `docs/known-issues.md` — **已知问题记录（改侧边栏前必读）**
+- `docs/superpowers/specs/` — 历史设计文档
 
 ## 命令
 
 ```bash
-npm run test        # 全部 Vitest 测试（改代码后必跑）
-npm run build       # Vite 构建 + 同步到 ~/Downloads/LocalDebugAI_chrome/（Chrome 加载目录）
-npm run build:local # 仅构建到 dist/（无同步）
-npm run zip         # 构建 + 打包 LocalDebugAI_v1.0.zip
-node scripts/generate-icons.mjs  # 重新生成 Logo 图标
+npm run test          # 全部 Vitest 测试（改代码后必跑，102 测试）
+npm run build         # Vite 构建 + 同步到 ~/Downloads/LocalDebugAI_chrome/（Chrome 加载目录）
+npm run build:local   # 仅构建到 dist/（无同步）
+npm run typecheck     # vue-tsc --skipLibCheck（有预存 chrome 命名空间噪声，忽略即可）
+npm run zip           # 构建 + 打包 LocalDebugAI_v1.0.zip
 ```
 
-- 无 lint / typecheck 命令；`vue-tsc --noEmit` 会报大量 `chrome` 命名空间错误（未装 @types/chrome，属预存问题，忽略）
+- 无 lint 命令
 - 构建前无需手动清理 dist（vite emptyOutDir）
 
 ## 架构关键约束
@@ -34,17 +35,29 @@ node scripts/generate-icons.mjs  # 重新生成 Logo 图标
 3. **页面加载清理**：content 只清 `timestamp < pageLoadTime` 的旧记录，**绝不写 `recordingStatuses`**（否则异步竞态会覆盖用户已开始的录制状态）。
 4. **AI 调用用激活模型**：`storage.getActiveModel()` 取 `models[activeModelId]`，无激活返回错误提示。多模型列表在设置页管理。
 5. **origin 标识**：统一用 `new URL(url).host`（含端口，如 `localhost:5173`），隔离各站点数据。
-6. **存储结构**：`global` = `{ models: ModelConfig[], activeModelId }`；每个 origin 一个 `OriginSession`（projectContext/currentRecording/analysisHistory）。
+6. **存储结构**：`global` = `{ models: ModelConfig[], activeModelId }`；每个 origin 一个 `OriginSession`（projectContext/currentRecording/analysisHistory/pageAnalysis/pageAnalysisHistory）。
+7. **内容脚本幂等守卫**：`window.__UDA_bound` 标志位防止同一 document 重复绑定事件监听。`main()` 函数包裹所有监听器注册。
+
+## 页面分析功能（2026-08 新增）
+
+- **采集**：content script 通过 `capturePageSnapshot()` 采集整页组件与样式；`capturePageSnapshotInRect(rect)` 限定矩形区域。
+- **选区交互**：`enterSelectMode()` 在页面叠加蒙层，用户拖拽框选后返回选区矩形。
+- **消息协议**：`PAGE_ANALYZE_REQUEST`（整页）/ `PAGE_SELECT_REQUEST`（选区）/ `PAGE_SNAPSHOT`（响应）/ `PAGE_SELECT_CANCEL`（取消）。
+- **AI 提示词**：`buildPageAnalysisPrompt()` 在 `ai.ts` 中独立于 `buildSystemPrompt`。
+- **存储**：最近一次结果存 `originSession.pageAnalysis`，历史累计存 `pageAnalysisHistory` 数组。历史记录页有独立子 Tab「页面分析」。
 
 ## 已知陷阱（务必避免）
 
 - **禁止调用 `chrome.sidePanel.setOptions({ tabId, enabled: false })`** — 会被 Chrome 持久化，导致侧边栏永久打不开（详见 docs/known-issues.md）。侧边栏控制只用 `setPanelBehavior` / `close()`。
 - **`chrome.runtime.sendMessage` 可能返回 undefined**（无接收端时），用 `try/catch` 包裹，不要用 `.catch()`（在 mock 环境会崩）。
 - **不要移除 `reloadRecordingData` 的导出** — DebugRecord 轮询依赖它。
+- **Vue 3 响应式陷阱**：History.vue 的 `expanded` 用 `Record<number,boolean>` 而非 `Set<number>`（`Set.add()`/`.delete()` 非响应式）。
 - 测试 mock 的 `chrome.storage.local.get` 按 key 返回时，注意 jsdom 默认 URL 是 `localhost:3000`。
+- `MarkdownRenderer` 的 `parseMarkdown` 传 undefined 不会崩（`!text` 守卫），但 template 中 `:content` 绑定应确保有值。
 
 ## 约定
 
 - 类型：TS 严格模式；vue-tsc 的 chrome 报错属预存问题，以 `npm run build` 和 `npm run test` 为验证标准。
 - 组件：Vue 3 `<script setup>` + TailwindCSS 工具类，无独立样式文件（style.css 只有全局基础样式）。
 - 修改后：跑 `npm run test`；涉及 UI 再跑 `npm run build` 验证产物。
+- 新功能测试：prompt 函数 → `tests/utils/ai.test.ts`；store 链路 → `tests/stores/useAppStore.test.ts`；DOM 采集 → `tests/content/`；storage → `tests/utils/storage.test.ts`。
