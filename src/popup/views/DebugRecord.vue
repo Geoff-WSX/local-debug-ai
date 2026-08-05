@@ -36,6 +36,38 @@
       </button>
     </div>
 
+    <!-- 页面分析 / 选区分析按钮 -->
+    <div class="flex gap-2 px-3 py-2 border-b border-edge bg-base-panel">
+      <button
+        class="flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 border border-edge-strong bg-surface-raised shadow-card hover:bg-base-hover disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
+        :disabled="store.isAnalyzingPage || store.isAnalyzing"
+        @click="handlePageAnalysis"
+      >
+        <AppIcon
+          v-if="store.isAnalyzingPage"
+          name="loader"
+          :size="14"
+          class="animate-spin text-accent"
+        />
+        <AppIcon v-else name="target" :size="14" />
+        分析页面
+      </button>
+      <button
+        class="flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 border border-edge-strong bg-surface-raised shadow-card hover:bg-base-hover disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
+        :disabled="store.isAnalyzingPage || store.isAnalyzing"
+        @click="handleSelectArea"
+      >
+        <AppIcon
+          v-if="store.isSelecting"
+          name="loader"
+          :size="14"
+          class="animate-spin text-accent"
+        />
+        <AppIcon v-else name="target" :size="14" />
+        {{ store.isSelecting ? '请框选页面区域...' : '分析选区' }}
+      </button>
+    </div>
+
     <!-- 预期效果输入 -->
     <div v-if="store.liveRecords.length > 0" class="mx-3 mt-2 mb-2 px-3 py-2.5 border border-accent/30 bg-accent-soft/60 rounded-lg">
       <label class="text-xs font-medium text-accent flex items-center gap-1.5 mb-1.5">
@@ -93,6 +125,35 @@
         </div>
       </div>
     </Transition>
+
+    <!-- 页面分析结果 -->
+    <Transition name="result">
+      <div v-if="pageAnalysisResult !== null" class="border-t border-edge max-h-[260px] overflow-y-auto bg-base-panel">
+        <div class="flex items-center justify-between px-3 py-2 bg-surface-raised border-b border-edge sticky top-0">
+          <span class="text-xs font-medium text-accent flex items-center gap-1.5">
+            <AppIcon name="target" :size="13" />
+            页面风格分析
+          </span>
+          <div class="flex items-center gap-1">
+            <button
+              class="text-xs text-tsecondary hover:text-tprimary transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-base-hover"
+              @click="copyPageResult"
+            >
+              <AppIcon name="check" :size="12" /> 复制
+            </button>
+            <button
+              class="text-xs text-tsecondary hover:text-tprimary transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-base-hover"
+              @click="pageAnalysisResult = null"
+            >
+              <AppIcon name="close" :size="12" /> 收起
+            </button>
+          </div>
+        </div>
+        <div class="p-3">
+          <MarkdownRenderer :content="pageAnalysisResult" />
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -108,6 +169,7 @@ import { showToast } from '@/popup/components/toastBus'
 
 const store = useAppStore()
 const analysisResult = ref<string | null>(null)
+const pageAnalysisResult = ref<string | null>(null)
 
 const analyzeIcon = computed(() => store.isAnalyzing ? 'loader' : 'analyze')
 
@@ -128,6 +190,38 @@ async function handleAnalyze() {
     return
   }
   analysisResult.value = result
+}
+
+async function handlePageAnalysis() {
+  const result = await store.analyzePage()
+  if (result === null) return
+  // 检查是否是错误信息
+  if (result.startsWith('请前往') || result.startsWith('AI 请求失败') || result.startsWith('网络连接失败') || result.startsWith('接口地址') || result.startsWith('AI 返回') || result.startsWith('无法') || result.startsWith('页面') || result.startsWith('未检测到')) {
+    showToast('error', result)
+    return
+  }
+  pageAnalysisResult.value = result
+}
+
+async function handleSelectArea() {
+  const result = await store.analyzeSelectArea()
+  if (result === null) return // 用户取消选区
+  // 检查是否是错误信息
+  if (result.startsWith('请前往') || result.startsWith('AI 请求失败') || result.startsWith('网络连接失败') || result.startsWith('接口地址') || result.startsWith('AI 返回') || result.startsWith('无法') || result.startsWith('页面') || result.startsWith('未检测到')) {
+    showToast('error', result)
+    return
+  }
+  pageAnalysisResult.value = result
+}
+
+async function copyPageResult() {
+  if (!pageAnalysisResult.value) return
+  try {
+    await navigator.clipboard.writeText(pageAnalysisResult.value)
+    showToast('success', '已复制到剪贴板')
+  } catch {
+    showToast('error', '复制失败')
+  }
 }
 
 // 监听 storage 变化：content script 写入后自动刷新

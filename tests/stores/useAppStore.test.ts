@@ -10,6 +10,16 @@ const mockFindUnanalyzed = vi.fn()
 const mockUpdateHistoryResult = vi.fn()
 const mockGetActiveModel = vi.fn()
 
+// chrome.tabs 的受控 mock（setup.ts 的全局 mock 未声明返回类型，此处给类型化包装便于链式断言）
+const mockTabsQuery = (chrome.tabs.query as any) as {
+  mockResolvedValue: (v: any) => void
+  mockRejectedValue: (e: any) => void
+}
+const mockTabsSendMessage = (chrome.tabs.sendMessage as any) as {
+  mockResolvedValue: (v: any) => void
+  mockRejectedValue: (e: any) => void
+}
+
 vi.mock('../../src/utils/storage', () => ({
   getGlobalConfig: vi.fn(),
   setGlobalConfig: vi.fn(),
@@ -21,6 +31,9 @@ vi.mock('../../src/utils/storage', () => ({
   clearRecording: vi.fn(),
   deleteHistoryItem: vi.fn(),
   clearAllHistory: vi.fn(),
+  appendPageAnalysisHistory: vi.fn(),
+  deletePageAnalysisHistory: vi.fn(),
+  clearPageAnalysisHistory: vi.fn(),
   getRecordingStatus: (...args: any[]) => mockGetRecordingStatus(...args),
   setRecordingStatus: (...args: any[]) => mockSetRecordingStatus(...args),
   findUnanalyzedHistory: (...args: any[]) => mockFindUnanalyzed(...args),
@@ -308,5 +321,188 @@ describe('useAppStore', () => {
 
     expect(store.globalConfig.activeModelId).toBe('m1')
     expect(storage.setGlobalConfig).toHaveBeenCalledWith({ activeModelId: 'm1' })
+  })
+
+  // ===== 页面分析 =====
+  it('analyzePage should capture snapshot, call AI and store result', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '# 项目', currentRecording: [], analysisHistory: [],
+    }
+    mockGetActiveModel.mockResolvedValue({
+      id: 'm1', name: 'Test', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
+    })
+
+    mockTabsQuery.mockResolvedValue([{ id: 1, url: 'https://example.com' }])
+    mockTabsSendMessage.mockResolvedValue({
+      type: 'PAGE_SNAPSHOT',
+      snapshot: {
+        url: 'https://example.com', title: 'Test', viewport: '1024x768',
+        tokens: { colors: ['#fff'], fonts: ['sans-serif'], fontSizes: [], spacing: [], radii: [], shadows: [] },
+        components: [{ tag: 'button', className: 'btn', style: { color: '#000' } }],
+        layout: '单列',
+      },
+    })
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: vi.fn().mockReturnValue('application/json') },
+      text: () => Promise.resolve(JSON.stringify({ choices: [{ message: { content: '# 页面风格说明' } }] })),
+    })
+
+    const result = await store.analyzePage()
+
+    expect(result).toBe('# 页面风格说明')
+    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, { type: 'PAGE_ANALYZE_REQUEST' })
+    expect(store.isAnalyzingPage).toBe(false)
+    expect(store.originSession.pageAnalysis?.result).toBe('# 页面风格说明')
+    // 断言同时写入了历史
+    expect(store.originSession.pageAnalysisHistory?.length).toBe(1)
+    expect(store.originSession.pageAnalysisHistory![0].url).toBe('https://example.com')
+    expect(store.originSession.pageAnalysisHistory![0].title).toBe('Test')
+    expect(storage.setOriginSession).toHaveBeenCalled()
+  })
+
+  it('analyzePage should return error when no active model', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '', currentRecording: [], analysisHistory: [],
+    }
+    mockGetActiveModel.mockResolvedValue(null)
+
+    const result = await store.analyzePage()
+
+    expect(result).toContain('配置并激活')
+    expect(store.isAnalyzingPage).toBe(false)
+  })
+
+  it('analyzePage should return error when no active tab', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '', currentRecording: [], analysisHistory: [],
+    }
+    mockGetActiveModel.mockResolvedValue({
+      id: 'm1', name: 'T', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
+    })
+    mockTabsQuery.mockResolvedValue([])
+
+    const result = await store.analyzePage()
+
+    expect(result).toContain('无法获取当前页面')
+  })
+
+  it('analyzePage should return error when content not responding', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '', currentRecording: [], analysisHistory: [],
+    }
+    mockGetActiveModel.mockResolvedValue({
+      id: 'm1', name: 'T', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
+    })
+    mockTabsQuery.mockResolvedValue([{ id: 1, url: 'https://example.com' }])
+    mockTabsSendMessage.mockRejectedValue(new Error('Receiving end does not exist'))
+
+    const result = await store.analyzePage()
+
+    expect(result).toContain('页面未响应')
+  })
+
+  it('analyzeSelectArea should analyze snapshot within rect', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '# 项目', currentRecording: [], analysisHistory: [],
+    }
+    mockGetActiveModel.mockResolvedValue({
+      id: 'm1', name: 'Test', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
+    })
+
+    mockTabsQuery.mockResolvedValue([{ id: 1, url: 'https://example.com' }])
+    mockTabsSendMessage.mockResolvedValue({
+      type: 'PAGE_SNAPSHOT',
+      snapshot: {
+        url: 'https://example.com', title: 'Test', viewport: '1024x768',
+        tokens: { colors: ['#fff'], fonts: [], fontSizes: [], spacing: [], radii: [], shadows: [] },
+        components: [{ tag: 'button', className: 'btn', style: { color: '#000' } }],
+        layout: '选区布局',
+        rect: { x: 10, y: 20, width: 100, height: 50 },
+      },
+    })
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: vi.fn().mockReturnValue('application/json') },
+      text: () => Promise.resolve(JSON.stringify({ choices: [{ message: { content: '# 选区风格' } }] })),
+    })
+
+    const result = await store.analyzeSelectArea()
+
+    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, { type: 'PAGE_SELECT_REQUEST' })
+    expect(result).toBe('# 选区风格')
+    expect(store.isSelecting).toBe(false)
+    expect(store.originSession.pageAnalysis?.result).toBe('# 选区风格')
+    expect(store.originSession.pageAnalysisHistory?.length).toBe(1)
+  })
+
+  it('analyzeSelectArea should return null when user cancels', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '', currentRecording: [], analysisHistory: [],
+    }
+    mockGetActiveModel.mockResolvedValue({
+      id: 'm1', name: 'T', apiKey: 'sk-key',
+      baseUrl: 'https://api.openai.com/v1', apiPath: '/chat/completions', model: 'gpt-4o-mini',
+    })
+    mockTabsQuery.mockResolvedValue([{ id: 1, url: 'https://example.com' }])
+    mockTabsSendMessage.mockResolvedValue({ type: 'PAGE_SELECT_CANCEL' })
+
+    const result = await store.analyzeSelectArea()
+
+    expect(result).toBeNull()
+    expect(store.isSelecting).toBe(false)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('deletePageAnalysisItem should remove by timestamp', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '', currentRecording: [], analysisHistory: [],
+      pageAnalysisHistory: [
+        { timestamp: 100, url: 'https://a.com', title: 'A', result: 'result a' },
+        { timestamp: 200, url: 'https://b.com', title: 'B', result: 'result b' },
+      ],
+    }
+
+    await store.deletePageAnalysisItem(100)
+
+    expect(store.originSession.pageAnalysisHistory?.length).toBe(1)
+    expect(store.originSession.pageAnalysisHistory![0].title).toBe('B')
+    expect(storage.deletePageAnalysisHistory).toHaveBeenCalledWith('localhost:5173', 100)
+  })
+
+  it('clearPageAnalysisHistory should clear all', async () => {
+    const store = useAppStore()
+    store.currentOrigin = 'localhost:5173'
+    store.originSession = {
+      projectContext: '', currentRecording: [], analysisHistory: [],
+      pageAnalysisHistory: [
+        { timestamp: 100, url: 'https://a.com', title: 'A', result: 'a' },
+      ],
+    }
+
+    await store.clearPageAnalysisHistory()
+
+    expect(store.originSession.pageAnalysisHistory?.length).toBe(0)
+    expect(storage.clearPageAnalysisHistory).toHaveBeenCalledWith('localhost:5173')
   })
 })

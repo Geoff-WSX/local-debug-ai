@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildSystemPrompt, validateBeforeAnalyze } from '../../src/utils/ai'
-import type { OperationItem } from '../../src/types'
+import { buildSystemPrompt, validateBeforeAnalyze, buildPageAnalysisPrompt } from '../../src/utils/ai'
+import type { OperationItem, PageAnalysisInput } from '../../src/types'
 
 describe('ai', () => {
   describe('buildSystemPrompt', () => {
@@ -70,6 +70,58 @@ describe('ai', () => {
     it('should return null when all conditions are met', () => {
       const err = validateBeforeAnalyze('sk-key', [{ type: 'click', timestamp: 1, pageUrl: '/' }])
       expect(err).toBeNull()
+    })
+  })
+
+  describe('buildPageAnalysisPrompt', () => {
+    const snapshot: PageAnalysisInput = {
+      url: 'https://example.com',
+      title: '测试页',
+      viewport: '1280x800',
+      tokens: {
+        colors: ['#ffffff', '#000000'],
+        cssVariables: { '--primary': '#3b82f6' },
+        fonts: ['Arial', 'sans-serif'],
+        fontSizes: ['14px', '16px'],
+        spacing: ['8px', '16px'],
+        radii: ['4px'],
+        shadows: ['0 1px 3px rgba(0,0,0,0.1)'],
+      },
+      components: [
+        { tag: 'button', className: 'btn', text: '登录', style: { color: '#fff', background: '#3b82f6' } },
+        { tag: 'input', type: 'search', className: 'search', style: { fontSize: '14px' } },
+      ],
+      layout: '单列布局',
+    }
+
+    it('should include page overview', () => {
+      const prompt = buildPageAnalysisPrompt('', snapshot)
+      expect(prompt).toContain('测试页')
+      expect(prompt).toContain('1280x800')
+      expect(prompt).toContain('单列布局')
+      expect(prompt).toContain('页面概览')
+    })
+
+    it('should include design tokens and component list', () => {
+      const prompt = buildPageAnalysisPrompt('', snapshot)
+      expect(prompt).toContain('#ffffff')
+      expect(prompt).toContain('Arial')
+      expect(prompt).toContain('button')
+      expect(prompt).toContain('input')
+      expect(prompt).toContain('设计令牌')
+      expect(prompt).toContain('组件清单')
+    })
+
+    it('should include reuse prompt section and CSS variables', () => {
+      const prompt = buildPageAnalysisPrompt('', snapshot)
+      expect(prompt).toContain('复用提示词')
+      expect(prompt).toContain('--primary')
+    })
+
+    it('should include project context when provided', () => {
+      const prompt = buildPageAnalysisPrompt('这是一个登录页', snapshot)
+      expect(prompt).toContain('这是一个登录页')
+      expect(prompt).toContain('项目背景')
     })
   })
 })

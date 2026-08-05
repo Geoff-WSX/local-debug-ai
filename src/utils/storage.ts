@@ -1,4 +1,4 @@
-import type { GlobalConfig, OriginSession, OperationItem, AnalysisRecord, ModelConfig } from '../types'
+import type { GlobalConfig, OriginSession, OperationItem, AnalysisRecord, ModelConfig, PageAnalysisRecord } from '../types'
 import { DEFAULT_GLOBAL_CONFIG, createDefaultOriginSession, genModelId } from '../types'
 
 // ===== 全局配置 =====
@@ -208,4 +208,36 @@ export async function updateHistoryResult(origin: string, timestamp: number, res
     session.analysisHistory[idx].result = result
     await chrome.storage.local.set({ [origin]: session })
   }
+}
+
+// ===== 页面分析历史 =====
+
+/**
+ * 追加一条页面分析历史
+ */
+export async function appendPageAnalysisHistory(origin: string, record: PageAnalysisRecord): Promise<void> {
+  const session = await getOriginSession(origin)
+  if (!session.pageAnalysisHistory) session.pageAnalysisHistory = []
+  session.pageAnalysisHistory.push(record)
+  await chrome.storage.local.set({ [origin]: session })
+}
+
+/**
+ * 删除指定页面分析历史
+ */
+export async function deletePageAnalysisHistory(origin: string, timestamp: number): Promise<void> {
+  const session = await getOriginSession(origin)
+  if (session.pageAnalysisHistory) {
+    session.pageAnalysisHistory = session.pageAnalysisHistory.filter((r) => r.timestamp !== timestamp)
+    await chrome.storage.local.set({ [origin]: session })
+  }
+}
+
+/**
+ * 清空页面分析历史
+ */
+export async function clearPageAnalysisHistory(origin: string): Promise<void> {
+  const session = await getOriginSession(origin)
+  session.pageAnalysisHistory = []
+  await chrome.storage.local.set({ [origin]: session })
 }

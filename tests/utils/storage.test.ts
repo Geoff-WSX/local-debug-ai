@@ -1,26 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
-  getGlobalConfig,
-  setGlobalConfig,
-  getOriginSession,
-  setOriginSession,
-  appendRecording,
-  appendHistory,
-  clearRecording,
-  deleteHistoryItem,
-  clearAllHistory,
-  getRecordingStatus,
-  setRecordingStatus,
-  appendUnanalyzedHistory,
-  findUnanalyzedHistory,
-  updateHistoryResult,
-  getActiveModel,
-  addModel,
-  updateModel,
-  deleteModel,
-  setActiveModel,
+  getGlobalConfig, setGlobalConfig,
+  getOriginSession, setOriginSession,
+  appendRecording, appendHistory, clearRecording, deleteHistoryItem, clearAllHistory,
+  getRecordingStatus, setRecordingStatus, appendUnanalyzedHistory, findUnanalyzedHistory, updateHistoryResult,
+  getActiveModel, addModel, updateModel, deleteModel, setActiveModel,
+  appendPageAnalysisHistory, deletePageAnalysisHistory, clearPageAnalysisHistory,
 } from '../../src/utils/storage'
-import type { GlobalConfig, OriginSession, OperationItem, ModelConfig } from '../../src/types'
+import type { GlobalConfig, OriginSession, OperationItem, ModelConfig, PageAnalysisRecord } from '../../src/types'
 
 const mockChrome = chrome as any
 
@@ -135,9 +122,9 @@ describe('storage', () => {
       const session = await getOriginSession('localhost:5173')
       expect(session).toEqual({
         projectContext: '',
-        
         currentRecording: [],
         analysisHistory: [],
+        pageAnalysisHistory: [],
       })
     })
 
@@ -348,6 +335,67 @@ describe('storage', () => {
 
       const setCall = mockChrome.storage.local.set.mock.calls[0][0]
       expect(setCall[origin].analysisHistory[0].result).toBe('# Result')
+    })
+  })
+
+  describe('pageAnalysisHistory', () => {
+    it('appendPageAnalysisHistory should push a record', async () => {
+      const origin = 'localhost:5173'
+      const existing: OriginSession = {
+        projectContext: '', currentRecording: [], analysisHistory: [],
+        pageAnalysisHistory: [],
+      }
+      mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
+      const record: PageAnalysisRecord = { timestamp: 100, url: 'https://a.com', title: 'A', result: 'r' }
+
+      await appendPageAnalysisHistory(origin, record)
+
+      const setCall = mockChrome.storage.local.set.mock.calls[0][0]
+      expect(setCall[origin].pageAnalysisHistory).toHaveLength(1)
+      expect(setCall[origin].pageAnalysisHistory[0].result).toBe('r')
+    })
+
+    it('appendPageAnalysisHistory should init array when missing', async () => {
+      const origin = 'localhost:5173'
+      const existing: OriginSession = { projectContext: '', currentRecording: [], analysisHistory: [] }
+      mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
+
+      await appendPageAnalysisHistory(origin, { timestamp: 1, url: 'x', result: 'r' })
+
+      const setCall = mockChrome.storage.local.set.mock.calls[0][0]
+      expect(setCall[origin].pageAnalysisHistory).toHaveLength(1)
+    })
+
+    it('deletePageAnalysisHistory should remove by timestamp', async () => {
+      const origin = 'localhost:5173'
+      const existing: OriginSession = {
+        projectContext: '', currentRecording: [], analysisHistory: [],
+        pageAnalysisHistory: [
+          { timestamp: 100, url: 'a', result: 'a' },
+          { timestamp: 200, url: 'b', result: 'b' },
+        ],
+      }
+      mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
+
+      await deletePageAnalysisHistory(origin, 100)
+
+      const setCall = mockChrome.storage.local.set.mock.calls[0][0]
+      expect(setCall[origin].pageAnalysisHistory).toHaveLength(1)
+      expect(setCall[origin].pageAnalysisHistory[0].timestamp).toBe(200)
+    })
+
+    it('clearPageAnalysisHistory should clear all', async () => {
+      const origin = 'localhost:5173'
+      const existing: OriginSession = {
+        projectContext: '', currentRecording: [], analysisHistory: [],
+        pageAnalysisHistory: [{ timestamp: 100, url: 'a', result: 'a' }],
+      }
+      mockChrome.storage.local.get.mockResolvedValue({ [origin]: existing })
+
+      await clearPageAnalysisHistory(origin)
+
+      const setCall = mockChrome.storage.local.set.mock.calls[0][0]
+      expect(setCall[origin].pageAnalysisHistory).toEqual([])
     })
   })
 })

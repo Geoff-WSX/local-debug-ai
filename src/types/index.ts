@@ -45,11 +45,88 @@ export interface AnalysisRecord {
   result: string
 }
 
+// ===== 页面分析（组件 & 风格快照）=====
+// 单个组件的样式快照（getComputedStyle 采样的可复现属性）
+export interface ComponentStyle {
+  color?: string
+  background?: string
+  fontSize?: string
+  fontWeight?: string
+  fontFamily?: string
+  borderRadius?: string
+  padding?: string
+  margin?: string
+  gap?: string
+  boxShadow?: string
+  display?: string
+  flexDirection?: string
+  justifyContent?: string
+  alignItems?: string
+}
+
+// 采样到的单个组件
+export interface ComponentInfo {
+  tag: string
+  className?: string
+  text?: string
+  // 控件类型（button:submit/reset、input:text/search 等）
+  type?: string
+  style: ComponentStyle
+}
+
+// 页面风格 tokens（颜色 / 字体 / 间距 / 圆角 / 阴影）
+export interface PageStyleTokens {
+  colors: string[]        // 去重的颜色值
+  cssVariables?: Record<string, string>  // --xxx 自定义属性
+  fonts: string[]         // 去重的 font-family
+  fontSizes: string[]
+  spacing: string[]
+  radii: string[]
+  shadows: string[]
+}
+
+// content 脚本采集的页面 DOM/样式快照
+export interface PageAnalysisInput {
+  url: string
+  title: string
+  viewport: string        // 如 "1920x1080"
+  tokens: PageStyleTokens
+  components: ComponentInfo[]
+  layout: string          // 简短布局结构描述（容器/栅格/间距归纳）
+  rect?: Rect             // 选区分析：限定矩形区域（视口坐标）
+}
+
+// 选区矩形（视口坐标）
+export interface Rect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+// AI 分析后存储的输出（用户可直接复制的描述）
+export interface PageAnalysisOutput {
+  result: string          // AI 生成的页面设计风格说明
+  analyzedAt: number
+}
+
+// 页面分析历史条目（可回溯查看的每一次页面分析结果）
+export interface PageAnalysisRecord {
+  timestamp: number
+  url: string             // 分析时的页面 URL
+  title?: string          // 页面标题（可选）
+  result: string          // AI 生成的页面设计风格说明
+}
+
 // ===== 单个 Origin 站点数据 =====
 export interface OriginSession {
   projectContext: string
   currentRecording: OperationItem[]
   analysisHistory: AnalysisRecord[]
+  // 页面分析结果（独立于调试历史，可选）
+  pageAnalysis?: PageAnalysisOutput
+  // 页面分析历史（多条的累计记录）
+  pageAnalysisHistory?: PageAnalysisRecord[]
 }
 
 // ===== 整体存储结构 =====
@@ -69,6 +146,12 @@ export type ExtensionMessage =
   | { type: 'RECORDING_STATUS'; active: boolean }
   | { type: 'RECORDING_CHANGED'; records: OperationItem[] }
   | { type: 'TAB_CHANGED'; origin: string }
+  // 页面分析：侧边栏请求 content 采集快照
+  | { type: 'PAGE_ANALYZE_REQUEST' }
+  | { type: 'PAGE_SNAPSHOT'; snapshot: PageAnalysisInput }
+  // 页面选区分析：侧边栏命令 content 进入选区模式 / 取消
+  | { type: 'PAGE_SELECT_REQUEST' }
+  | { type: 'PAGE_SELECT_CANCEL' }
 
 // ===== 默认值 =====
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
@@ -98,5 +181,6 @@ export function createDefaultOriginSession(): OriginSession {
     projectContext: '',
     currentRecording: [],
     analysisHistory: [],
+    pageAnalysisHistory: [],
   }
 }
